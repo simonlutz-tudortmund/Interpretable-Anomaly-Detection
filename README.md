@@ -66,11 +66,3 @@ Transitions: {(0, 'a'): 1, (1, 'b'): 2, (2, 'c'): 3}
 Initial State: 0
 Final States: {3}
 ```
-
-## License
-
-This project uses Gurobi, which is a commercial optimization solver. Make sure to comply with Gurobi's license terms.
-
-## Contributing
-
-Feel free to open issues or pull requests for improvements or bug fixes. Contributions are welcome!
