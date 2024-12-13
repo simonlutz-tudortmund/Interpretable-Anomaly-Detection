@@ -88,7 +88,7 @@ def add_acceptance_constraints(model, states, sample, x, final_states):
     return alpha
 
 
-def add_sample_constraints(model, states, sample, alpha, lower_bound, upper_bound):
+def add_sample_constraints_1(model, states, sample, alpha, lower_bound, upper_bound):
     """Add constraints on the number of accepted words."""
     accepted = model.addVars(sample, vtype=GRB.BINARY, name="accepted")
     for w in sample:
@@ -102,14 +102,22 @@ def add_sample_constraints(model, states, sample, alpha, lower_bound, upper_boun
     return accepted
 
 
-def set_objective(model, sample, accepted, lower_bound, upper_bound):
+def add_sample_constraints(model, states, sample, alpha, lower_bound, upper_bound):
+    """Add constraints on the number of accepted words."""
+    if lower_bound:
+        model.addConstr(sum(alpha[w, q] for w in sample for q in states) >= lower_bound, "lower_bound")
+    if upper_bound:
+        model.addConstr(sum(alpha[w, q] for w in sample for q in states) <= upper_bound, "upper_bound")
+
+
+def set_objective(model, states, sample, alpha, lower_bound, upper_bound):
     """Set the objective function for the model."""
     if lower_bound and upper_bound:
         model.setObjective(1, GRB.MINIMIZE)
     elif lower_bound:
-        model.setObjective(sum(accepted[w] for w in sample), GRB.MINIMIZE)
+        model.setObjective(sum(alpha[w, q] for w in sample for q in states), GRB.MINIMIZE)
     elif upper_bound:
-        model.setObjective(sum(accepted[w] for w in sample), GRB.MAXIMIZE)
+        model.setObjective(sum(alpha[w, q] for w in sample for q in states), GRB.MAXIMIZE)
 
 
 def extract_dfa_solution(model, states, alphabet, delta, final_states):
@@ -137,8 +145,8 @@ def learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1
         add_initial_state_constraint(model, x, "")
         add_transition_follow_constraints(model, states, prefixes, alphabet, x, delta)
         alpha = add_acceptance_constraints(model, states, sample, x, final_states)
-        accepted = add_sample_constraints(model, states, sample, alpha, lower_bound, upper_bound)
-        set_objective(model, sample, accepted, lower_bound, upper_bound)
+        add_sample_constraints(model, states, sample, alpha, lower_bound, upper_bound)
+        set_objective(model, states, sample, alpha, lower_bound, upper_bound)
         model.optimize()
         solution = extract_dfa_solution(model, states, alphabet, delta, final_states)
         if solution:
@@ -147,13 +155,13 @@ def learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1
 
 
 # Example usage
-sample = [("a", "b", "b"), ("a", "a"), ("a", "b"), ("b", "a"), ("a", "a", "b"), ("b", "a", "b"), ("a", "a", "a"),
-          ("c", "c", "c", "c", "c"), ("c", "c", "c", "c", "c", "c")]
+sample = [("a", "b", "b"), ("a", "a"), ("a", "b"), ("a", "b", "b", "c", "c"), ("a", "a", "b"), ("b", "a", "b"), ("a", "a", "a"),
+          ("c", "c", "c", "c", "c", "a", "b"), ("c", "c", "c", "c", "c", "c", "c", "c", "a")]
 alphabet = {"a", "b", "c"}
-lower_bound = 2
-upper_bound = None
+lower_bound = 1
+upper_bound = 1
 
-dfa = learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=2)
+dfa = learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1)
 
 
 if dfa:
