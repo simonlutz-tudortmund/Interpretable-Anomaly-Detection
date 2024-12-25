@@ -199,6 +199,7 @@ def learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1
         model, states, delta, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token)
         add_sample_constraints(model, states, sample, alpha, lower_bound, upper_bound)
         set_bounded_objective(model, states, sample, alpha, lower_bound, upper_bound)
+
         model.optimize()
         solution = extract_dfa_solution(model, states, alphabet, delta, final_states)
         if solution:
@@ -217,19 +218,44 @@ def add_accepted_constraints(model, states, sample, alpha):
 
 
 def add_gamma_constraints(model, sample, accepted):
-    """Add constraints for prefix acceptance."""
+    """Add constraints for prefix acceptance.
+    gamma[w, w_] == 1 iff w_ is accepted and w is not
+    so gamma[w, w_] == 1 iff w is not an outlier and w_ is an outlier
+    """
     gamma = model.addVars(((s, s_) for s in sample for s_ in sample), vtype=GRB.BINARY, name="gammas")
+
     for w in sample:
         for w_ in sample:
             if w == w_:
                 continue
-            model.addConstr(gamma[w, w_] >= accepted[w] - accepted[w_], f"accept_and_rejected_{w}_{w_}_1")
-            model.addConstr(gamma[w, w_] <= accepted[w], f"accept_and_rejected_{w}_{w_}_2")
-            model.addConstr(gamma[w, w_] <= 1 - accepted[w_], f"accept_and_rejected_{w}_{w_}_3")
+            model.addConstr(gamma[w, w_] >= accepted[w_] - accepted[w], f"accepted_and_rejected_{w}_{w_}_1")
+            model.addConstr(gamma[w, w_] <= accepted[w_], f"accepted_and_rejected_{w}_{w_}_2")
+            model.addConstr(gamma[w, w_] <= 1 - accepted[w], f"accepted_and_rejected_{w}_{w_}_3")
+
     return gamma
 
 
-def add_distance_based_objective(model, sample, accepted, gamma, distance_matrix):
+def add_betta_constraints(model, sample, accepted):
+    """Add constraints for prefix acceptance."""
+    betta = model.addVars(((s, s_) for s in sample for s_ in sample), vtype=GRB.BINARY, name="bettas")
+
+    for w in sample:
+        for w_ in sample:
+            model.addConstr(betta[w, w_] >= 1 - accepted[w] - accepted[w_], f"rejected_and_rejected_{w}_{w_}_1")
+            model.addConstr(betta[w, w_] <= 1 - accepted[w], f"rejected_and_rejected_{w}_{w_}_2")
+            model.addConstr(betta[w, w_] <= 1 - accepted[w_], f"rejected_and_rejected_{w}_{w_}_3")
+
+    return betta
+
+
+def add_distance_based_objective(model,
+                                 sample,
+                                 accepted,
+                                 gamma,
+                                 betta,
+                                 distance_matrix,
+                                 reg_constant=0,
+                                 exchange_coef=0.5):
     """
     Add an objective to a Gurobi model based on distances between sequences.
 
@@ -239,28 +265,34 @@ def add_distance_based_objective(model, sample, accepted, gamma, distance_matrix
     - accepted: Dictionary of accepted variables for each sequence index.
     - gamma: Dictionary of gamma variables for sequence pairs.
     - distance_matrix: Precomputed distance matrix (numpy array).
+    - reg_constant: regularization of number of outliers
+    - exchange_coef: coefficient for forcing model to find more or less outliers
     """
     n = len(sample)
     max_dist = find_max_dist(distance_matrix)
-    model.setObjective(
-        sum(
-            accepted[sample[i]] * distance_matrix[i, j] + max_dist * gamma[sample[i], sample[j]]
-            for i in range(n) for j in range(n)
-        ),
-        GRB.MINIMIZE
-    )
+
+    objective = sum(
+        (1 - exchange_coef) * betta[sample[i], sample[j]] * distance_matrix[i, j] +
+        exchange_coef * gamma[sample[i], sample[j]] * (0 - distance_matrix[i, j])
+        for i in range(n) for j in range(n)
+    ) + sum(reg_constant * accepted[sample[i]] for i in range(n))
+
+    model.setObjective(objective, GRB.MINIMIZE)
 
 
 def learn_distance_based_dfa(sample, alphabet, dfa_size, start_token=""):
     prefixes = get_prefixes(sample, start_token)
     model, states, delta, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token)
     accepted = add_accepted_constraints(model, states, sample, alpha)
+
     gamma = add_gamma_constraints(model, sample, accepted)
+    betta = add_betta_constraints(model, sample, accepted)
 
     distance_matrix = calculate_distance_matrix(sample, levenshtein_distance)
-    add_distance_based_objective(model, sample, accepted, gamma, distance_matrix)
+    add_distance_based_objective(model, sample, accepted, gamma, betta, distance_matrix)
 
     model.optimize()
+
     solution = extract_dfa_solution(model, states, alphabet, delta, final_states)
     if solution:
         return solution
@@ -268,13 +300,17 @@ def learn_distance_based_dfa(sample, alphabet, dfa_size, start_token=""):
 
 # Example usage
 sample = [("a", "b", "b"), ("a", "a"), ("a", "b"), ("a", "b", "b", "c", "c"), ("a", "a", "b"), ("b", "a", "b"), ("a", "a", "a"),
-          ("c", "c", "c", "c", "c", "a", "b"), ("c", "c", "c", "c", "c", "c", "c", "c", "a")]
-alphabet = {"a", "b", "c"}
-lower_bound = 1
-upper_bound = 1
+          ("c", "c", "c", "c", "c", "c", "c"), ("c", "c", "c", "c", "c", "c", "c", "c", "a")]
 
-#dfa = learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1)
-dfa = learn_distance_based_dfa(sample, alphabet, dfa_size=10)
+sample_1 = [("a", "b"), ("a", "c"), ("a", "a", "a", "a", "a", "a")]
+sample_1 = [("a", "b"), ("a", "a"), ("b", "b"), ("c", "c", "a"), ("a", "a", "a", "a", "a", "c"), ("a", "a", "a", "a", "a", "c", "c")]
+
+alphabet = {"a", "b", "c"}
+lower_bound = 2
+upper_bound = 2
+
+#dfa = learn_minimal_dfa(sample_1, alphabet, lower_bound, upper_bound, min_dfa_size=1)
+dfa = learn_distance_based_dfa(sample_1, alphabet, dfa_size=30)
 
 
 if dfa:
@@ -314,7 +350,7 @@ def evaluate_sample_with_dfa(sample, dfa):
 
     return accepted, rejected
 
-accepted, rejected = evaluate_sample_with_dfa(sample, dfa)
+accepted, rejected = evaluate_sample_with_dfa(sample_1, dfa)
 
 print("Accepted words:", accepted)
 print("Rejected words:", rejected)
