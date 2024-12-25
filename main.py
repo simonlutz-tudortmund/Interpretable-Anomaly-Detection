@@ -1,4 +1,7 @@
 from gurobipy import Model, GRB
+import numpy as np
+from typing import List, Callable, Dict, Tuple
+import editdistance
 
 
 def algorithm_1(sample, alphabet, lower_bound, upper_bound):
@@ -16,7 +19,57 @@ def algorithm_2(sample, alphabet, lower_bound, upper_bound, min_dfa_size):
     return learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size)
 
 
-def initialize_prefixes_and_bounds(sample, alphabet, lower_bound, upper_bound, min_dfa_size):
+def get_prefixes(sample, start_token=""):
+    prefixes = {(start_token,)} | {tuple(pref) for word in sample for pref in
+                                   (tuple(word[:i + 1]) for i in range(len(word)))}
+    return prefixes
+
+
+def calculate_distance_matrix(
+    sample: List[Tuple[str, ...]],
+    distance_func: Callable[[Tuple[str, ...], Tuple[str, ...]], float]
+) -> np.ndarray:
+    """
+    Calculate a distance matrix between all pairs of sequences in the sample.
+
+    Parameters:
+    - sample: List of sequences (each sequence is a tuple of strings).
+    - distance_func: Function to calculate distance between two sequences.
+
+    Returns:
+    - A 2D numpy array where element (i, j) is the distance between sample[i] and sample[j].
+    """
+    n = len(sample)
+    distance_matrix = np.zeros((n, n))
+    for i in range(n):
+        for j in range(i, n):
+            dist = distance_func(sample[i], sample[j])
+            distance_matrix[i, j] = dist
+            distance_matrix[j, i] = dist  # Symmetric
+    return distance_matrix
+
+
+def levenshtein_distance(seq1: Tuple[str, ...], seq2: Tuple[str, ...]) -> float:
+    """Calculate the Levenshtein distance between two sequences of strings."""
+    return editdistance.eval(seq1, seq2)
+
+
+def jaccard_distance(seq1: Tuple[str, ...], seq2: Tuple[str, ...]) -> float:
+    """
+    Compute Jaccard distance between two sequences (as sets of elements).
+    """
+    set1, set2 = set(seq1), set(seq2)
+    intersection = len(set1 & set2)
+    union = len(set1 | set2)
+    return 1 - intersection / union if union != 0 else 1.0
+
+
+def find_max_dist(distance_matrix: np.ndarray) -> float:
+    """Find the maximum distance in the distance matrix."""
+    return np.max(distance_matrix)
+
+
+def initialize_prefixes_and_bounds(sample, alphabet, lower_bound, upper_bound, min_dfa_size, start_token=""):
     """Initialize prefixes, bounds, and validate arguments."""
     if not lower_bound and not upper_bound:
         raise ValueError('Both lower_bound and upper_bound are not set')
@@ -28,8 +81,7 @@ def initialize_prefixes_and_bounds(sample, alphabet, lower_bound, upper_bound, m
         raise ValueError('Invalid setup: one of lower_bound or upper_bound is not set while min_dfa_size == 1')
 
     start_token = ""
-    prefixes = {(start_token,)} | {tuple(pref) for word in sample for pref in
-                                   (tuple(word[:i + 1]) for i in range(len(word)))}
+    prefixes = get_prefixes(sample, start_token)
     max_prefix_size = len(prefixes)
     max_dfa_size = max_prefix_size + 2
     return prefixes, max_dfa_size
@@ -77,7 +129,7 @@ def add_transition_follow_constraints(model, states, prefixes, alphabet, x, delt
                         model.addConstr(delta[q, a, q_prime] >= x[wa, q_prime], f"run_{w}_{a}_{q}_{q_prime}_2")
 
 
-def add_acceptance_constraints(model, states, sample, x, final_states):
+def add_alpha_constraints(model, states, sample, x, final_states):
     """Add constraints for prefix acceptance."""
     alpha = model.addVars(((s, q) for s in sample for q in states), vtype=GRB.BINARY, name="alpha")
     for w in sample:
@@ -88,20 +140,6 @@ def add_acceptance_constraints(model, states, sample, x, final_states):
     return alpha
 
 
-def add_sample_constraints_1(model, states, sample, alpha, lower_bound, upper_bound):
-    """Add constraints on the number of accepted words."""
-    accepted = model.addVars(sample, vtype=GRB.BINARY, name="accepted")
-    for w in sample:
-        model.addConstr(accepted[w] <= sum(alpha[w, q] for q in states), f"accept_{w}_bound_upper")
-        for q in states:
-            model.addConstr(accepted[w] >= alpha[w, q], f"accept_{w}_bound_lower_{q}")
-    if lower_bound:
-        model.addConstr(sum(accepted[w] for w in sample) >= lower_bound, "lower_bound")
-    if upper_bound:
-        model.addConstr(sum(accepted[w] for w in sample) <= upper_bound, "upper_bound")
-    return accepted
-
-
 def add_sample_constraints(model, states, sample, alpha, lower_bound, upper_bound):
     """Add constraints on the number of accepted words."""
     if lower_bound:
@@ -110,7 +148,7 @@ def add_sample_constraints(model, states, sample, alpha, lower_bound, upper_boun
         model.addConstr(sum(alpha[w, q] for w in sample for q in states) <= upper_bound, "upper_bound")
 
 
-def set_objective(model, states, sample, alpha, lower_bound, upper_bound):
+def set_bounded_objective(model, states, sample, alpha, lower_bound, upper_bound):
     """Set the objective function for the model."""
     if lower_bound and upper_bound:
         model.setObjective(1, GRB.MINIMIZE)
@@ -136,17 +174,32 @@ def extract_dfa_solution(model, states, alphabet, delta, final_states):
     return None
 
 
-def learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1):
-    prefixes, max_dfa_size = initialize_prefixes_and_bounds(sample, alphabet, lower_bound, upper_bound, min_dfa_size)
-    for n in range(min_dfa_size, max_dfa_size):
-        model, states, delta, final_states, x = setup_model(n, alphabet, prefixes)
-        add_transition_constraints(model, states, alphabet, delta)
-        add_prefix_constraints(model, states, prefixes, x)
-        add_initial_state_constraint(model, x, "")
-        add_transition_follow_constraints(model, states, prefixes, alphabet, x, delta)
-        alpha = add_acceptance_constraints(model, states, sample, x, final_states)
+def set_dfa(sample, alphabet, dfa_size, prefixes=None, start_token=""):
+    if prefixes is None:
+        prefixes = get_prefixes(sample, start_token)
+
+    model, states, delta, final_states, x = setup_model(dfa_size, alphabet, prefixes)
+    add_transition_constraints(model, states, alphabet, delta)
+    add_prefix_constraints(model, states, prefixes, x)
+    add_initial_state_constraint(model, x, "")
+    add_transition_follow_constraints(model, states, prefixes, alphabet, x, delta)
+    alpha = add_alpha_constraints(model, states, sample, x, final_states)
+
+    return model, states, delta, final_states, alpha
+
+
+def learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1, start_token=""):
+    prefixes, max_dfa_size = initialize_prefixes_and_bounds(sample,
+                                                            alphabet,
+                                                            lower_bound,
+                                                            upper_bound,
+                                                            min_dfa_size,
+                                                            start_token)
+    for dfa_size in range(min_dfa_size, max_dfa_size):
+        model, states, delta, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token)
         add_sample_constraints(model, states, sample, alpha, lower_bound, upper_bound)
-        set_objective(model, states, sample, alpha, lower_bound, upper_bound)
+        set_bounded_objective(model, states, sample, alpha, lower_bound, upper_bound)
+
         model.optimize()
         solution = extract_dfa_solution(model, states, alphabet, delta, final_states)
         if solution:
@@ -154,14 +207,110 @@ def learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1
     return None
 
 
+def add_accepted_constraints(model, states, sample, alpha):
+    """Add constraints on accepted"""
+    accepted = model.addVars(sample, vtype=GRB.BINARY, name="accepted")
+    for w in sample:
+        model.addConstr(accepted[w] <= sum(alpha[w, q] for q in states), f"accept_{w}_bound_upper")
+        for q in states:
+            model.addConstr(accepted[w] >= alpha[w, q], f"accept_{w}_bound_lower_{q}")
+    return accepted
+
+
+def add_gamma_constraints(model, sample, accepted):
+    """Add constraints for prefix acceptance.
+    gamma[w, w_] == 1 iff w_ is accepted and w is not
+    so gamma[w, w_] == 1 iff w is not an outlier and w_ is an outlier
+    """
+    gamma = model.addVars(((s, s_) for s in sample for s_ in sample), vtype=GRB.BINARY, name="gammas")
+
+    for w in sample:
+        for w_ in sample:
+            if w == w_:
+                continue
+            model.addConstr(gamma[w, w_] >= accepted[w_] - accepted[w], f"accepted_and_rejected_{w}_{w_}_1")
+            model.addConstr(gamma[w, w_] <= accepted[w_], f"accepted_and_rejected_{w}_{w_}_2")
+            model.addConstr(gamma[w, w_] <= 1 - accepted[w], f"accepted_and_rejected_{w}_{w_}_3")
+
+    return gamma
+
+
+def add_betta_constraints(model, sample, accepted):
+    """Add constraints for prefix acceptance."""
+    betta = model.addVars(((s, s_) for s in sample for s_ in sample), vtype=GRB.BINARY, name="bettas")
+
+    for w in sample:
+        for w_ in sample:
+            model.addConstr(betta[w, w_] >= 1 - accepted[w] - accepted[w_], f"rejected_and_rejected_{w}_{w_}_1")
+            model.addConstr(betta[w, w_] <= 1 - accepted[w], f"rejected_and_rejected_{w}_{w_}_2")
+            model.addConstr(betta[w, w_] <= 1 - accepted[w_], f"rejected_and_rejected_{w}_{w_}_3")
+
+    return betta
+
+
+def add_distance_based_objective(model,
+                                 sample,
+                                 accepted,
+                                 gamma,
+                                 betta,
+                                 distance_matrix,
+                                 reg_constant=0,
+                                 exchange_coef=0.5):
+    """
+    Add an objective to a Gurobi model based on distances between sequences.
+
+    Parameters:
+    - model: Gurobi model.
+    - sample: List of sequences in the sample.
+    - accepted: Dictionary of accepted variables for each sequence index.
+    - gamma: Dictionary of gamma variables for sequence pairs.
+    - distance_matrix: Precomputed distance matrix (numpy array).
+    - reg_constant: regularization of number of outliers
+    - exchange_coef: coefficient for forcing model to find more or less outliers
+    """
+    n = len(sample)
+    max_dist = find_max_dist(distance_matrix)
+
+    objective = sum(
+        (1 - exchange_coef) * betta[sample[i], sample[j]] * distance_matrix[i, j] +
+        exchange_coef * gamma[sample[i], sample[j]] * (0 - distance_matrix[i, j])
+        for i in range(n) for j in range(n)
+    ) + sum(reg_constant * accepted[sample[i]] for i in range(n))
+
+    model.setObjective(objective, GRB.MINIMIZE)
+
+
+def learn_distance_based_dfa(sample, alphabet, dfa_size, start_token=""):
+    prefixes = get_prefixes(sample, start_token)
+    model, states, delta, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token)
+    accepted = add_accepted_constraints(model, states, sample, alpha)
+
+    gamma = add_gamma_constraints(model, sample, accepted)
+    betta = add_betta_constraints(model, sample, accepted)
+
+    distance_matrix = calculate_distance_matrix(sample, levenshtein_distance)
+    add_distance_based_objective(model, sample, accepted, gamma, betta, distance_matrix)
+
+    model.optimize()
+
+    solution = extract_dfa_solution(model, states, alphabet, delta, final_states)
+    if solution:
+        return solution
+
+
 # Example usage
 sample = [("a", "b", "b"), ("a", "a"), ("a", "b"), ("a", "b", "b", "c", "c"), ("a", "a", "b"), ("b", "a", "b"), ("a", "a", "a"),
-          ("c", "c", "c", "c", "c", "a", "b"), ("c", "c", "c", "c", "c", "c", "c", "c", "a")]
-alphabet = {"a", "b", "c"}
-lower_bound = 1
-upper_bound = 1
+          ("c", "c", "c", "c", "c", "c", "c"), ("c", "c", "c", "c", "c", "c", "c", "c", "a")]
 
-dfa = learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1)
+sample_1 = [("a", "b"), ("a", "c"), ("a", "a", "a", "a", "a", "a")]
+sample_1 = [("a", "b"), ("a", "a"), ("b", "b"), ("c", "c", "a"), ("a", "a", "a", "a", "a", "c"), ("a", "a", "a", "a", "a", "c", "c")]
+
+alphabet = {"a", "b", "c"}
+lower_bound = 2
+upper_bound = 2
+
+#dfa = learn_minimal_dfa(sample_1, alphabet, lower_bound, upper_bound, min_dfa_size=1)
+dfa = learn_distance_based_dfa(sample_1, alphabet, dfa_size=30)
 
 
 if dfa:
@@ -201,7 +350,7 @@ def evaluate_sample_with_dfa(sample, dfa):
 
     return accepted, rejected
 
-accepted, rejected = evaluate_sample_with_dfa(sample, dfa)
+accepted, rejected = evaluate_sample_with_dfa(sample_1, dfa)
 
 print("Accepted words:", accepted)
 print("Rejected words:", rejected)
