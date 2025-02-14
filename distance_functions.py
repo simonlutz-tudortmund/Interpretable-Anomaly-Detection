@@ -27,6 +27,23 @@ def hamming_distance(seq1: Tuple[str, ...], seq2: Tuple[str, ...]) -> float:
     return sum(el1 != el2 for el1, el2 in zip(seq1, seq2))
 
 
+def ordinal_hamming_distance(seq1: Tuple[str, ...], seq2: Tuple[str, ...]) -> float:
+    """
+    Compute Hamming distance between two sequences of numbers.
+    """
+    if len(seq1) != len(seq2):
+        raise ValueError("Sequences must be of the same length")
+    return sum(abs(float(el1) - float(el2)) for el1, el2 in zip(seq1, seq2))
+
+
+distance_function_names = {
+    "levenshtein": levenshtein_distance,
+    "jaccard": jaccard_distance,
+    "hamming": hamming_distance,
+    "ordinal_hamming": ordinal_hamming_distance
+}
+
+
 def find_max_dist(distance_matrix: np.ndarray) -> float:
     """Find the maximum distance in the distance matrix."""
     return np.max(distance_matrix)
