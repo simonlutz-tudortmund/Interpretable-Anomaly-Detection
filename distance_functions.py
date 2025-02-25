@@ -1,4 +1,5 @@
 import editdistance
+from dtaidistance import dtw
 from typing import List, Callable, Tuple
 import numpy as np
 
@@ -36,11 +37,22 @@ def ordinal_hamming_distance(seq1: Tuple[str, ...], seq2: Tuple[str, ...]) -> fl
     return sum(abs(float(el1) - float(el2)) for el1, el2 in zip(seq1, seq2))
 
 
+def dtw_distance(seq1: Tuple[str, ...], seq2: Tuple[str, ...]) -> float:
+    """
+    Compute dynamic time warping distance between two sequences of numbers.
+    """
+    float_seq1 = [float(element) for element in seq1]
+    float_seq2 = [float(element) for element in seq2]
+
+    return dtw.distance(float_seq1, float_seq2)
+
+
 distance_function_names = {
     "levenshtein": levenshtein_distance,
     "jaccard": jaccard_distance,
     "hamming": hamming_distance,
-    "ordinal_hamming": ordinal_hamming_distance
+    "ordinal_hamming": ordinal_hamming_distance,
+    "dynamic_time_warping": dtw_distance
 }
 
 
@@ -63,6 +75,10 @@ def calculate_distance_matrix(
     Returns:
     - A 2D numpy array where element (i, j) is the distance between sample[i] and sample[j].
     """
+    if distance_func is dtw_distance:
+        # transform into float
+        return dtw.distance_matrix(sample)
+
     n = len(sample)
     distance_matrix = np.zeros((n, n))
     for i in range(n):

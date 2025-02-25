@@ -3,14 +3,16 @@ from distance_functions import calculate_distance_matrix
 from constraints import (add_sample_constraints,
                          add_accepted_constraints,
                          add_gamma_constraints,
-                         add_betta_constraints
+                         add_betta_constraints,
+                         add_interpretability_constrates
                          )
 from objective_functions import set_bounded_objective, add_distance_based_objective
 from utility import get_prefixes
 from setup_dfa import initialize_prefixes_and_bounds, set_dfa
 
 
-def fit_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1, start_token="", verbose=0):
+def fit_minimal_dfa(sample, alphabet, lower_bound, upper_bound, lambda_s, lambda_l, lambda_p, min_dfa_size=1,
+                    start_token="", verbose=0):
     prefixes, max_dfa_size = initialize_prefixes_and_bounds(sample,
                                                             alphabet,
                                                             lower_bound,
@@ -19,40 +21,46 @@ def fit_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1, 
                                                             start_token)
 
     for dfa_size in range(min_dfa_size, max_dfa_size):
-        model, states, delta, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token, verbose)
+        model, states, transitions, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token, verbose)
+
+        eq = add_interpretability_constrates(model, states, alphabet, transitions, final_states, lambda_s, lambda_p)
+
         add_sample_constraints(model, states, sample, alpha, lower_bound, upper_bound)
-        set_bounded_objective(model, states, sample, alpha, lower_bound, upper_bound)
+        set_bounded_objective(model, states, sample, alpha, lower_bound, upper_bound, transitions, alphabet, lambda_s, lambda_l, lambda_p, eq)
 
         model.optimize()
-        solution = extract_dfa_solution(model, states, alphabet, delta, final_states)
+        solution = extract_dfa_solution(model, states, alphabet, transitions, final_states)
         if solution:
             return solution
     return None
 
 
-def fit_distance_based_dfa(sample, alphabet, dfa_size, distance_function, outlier_weight=0.5, start_token="", verbose=0):
+def fit_distance_based_dfa(sample, alphabet, dfa_size, distance_function, outlier_weight=0.5, lambda_s=0, lambda_l=0, lambda_p=0, start_token="", verbose=0):
     prefixes = get_prefixes(sample, start_token)
-    model, states, delta, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token, verbose)
+    model, states, transitions, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token, verbose)
     accepted = add_accepted_constraints(model, states, sample, alpha)
 
     gamma = add_gamma_constraints(model, sample, accepted)
     betta = add_betta_constraints(model, sample, accepted)
 
+    eq = add_interpretability_constrates(model, states, alphabet, transitions, final_states, lambda_s, lambda_p)
+
     distance_matrix = calculate_distance_matrix(sample, distance_function)
-    add_distance_based_objective(model, sample, accepted, gamma, betta, distance_matrix, outlier_weight)
+    add_distance_based_objective(model, sample, accepted, gamma, betta, distance_matrix, states, transitions,
+                                 outlier_weight, lambda_s, lambda_l, lambda_p, eq)
 
     model.optimize()
 
-    solution = extract_dfa_solution(model, states, alphabet, delta, final_states)
+    solution = extract_dfa_solution(model, states, alphabet, transitions, final_states)
     if solution:
         return solution
 
 
-def extract_dfa_solution(model, states, alphabet, delta, final_states):
+def extract_dfa_solution(model, states, alphabet, transitions, final_states):
     """Extract the DFA solution from the model."""
     if model.status == GRB.OPTIMAL:
         dfa_transitions = {(q, a): q_prime for q in states for a in alphabet for q_prime in states
-                           if delta[q, a, q_prime].x > 0.5}
+                           if transitions[q, a, q_prime].x > 0.5}
         final_states_set = {q for q in states if final_states[q].x > 0.5}
         return {
             "states": states,

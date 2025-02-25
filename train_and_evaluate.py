@@ -1,5 +1,5 @@
 import argparse
-from utility import load_sample, evaluate_sample_with_dfa, calculate_metrics, log_metrics
+from utility import load_sample, evaluate_sample_with_dfa, calculate_metrics, log_metrics, add_common_args
 import logging
 from typing import List, Tuple, Optional, Set
 from fit_dfa_wrapers import fit_and_log_dfa
@@ -11,6 +11,9 @@ def train_and_evaluate_dfa(train_filepath: str,
                            distance_function: str,
                            lower_bound: int,
                            upper_bound: int,
+                           lambda_s: float,
+                           lambda_l: float,
+                           lambda_p: float,
                            min_dfa_size: int,
                            is_numeric_data: bool = False,
                            verbose: int = 0,
@@ -46,6 +49,9 @@ def train_and_evaluate_dfa(train_filepath: str,
                           distance_function,
                           lower_bound,
                           upper_bound,
+                          lambda_s,
+                          lambda_l,
+                          lambda_p,
                           min_dfa_size,
                           verbose,
                           visualize,
@@ -67,31 +73,11 @@ def train_and_evaluate_dfa(train_filepath: str,
 
 def cli():
     parser = argparse.ArgumentParser(description="Learn a DFA from a sample.")
-    parser.add_argument("--train_filepath", type=str, default="sample.txt",
+    parser.add_argument("--train_filepath", type=str, default="train2.txt",
                         help="Path to the train sample file.")
-    parser.add_argument("--test_filepath", type=str, default="sample.txt",
+    parser.add_argument("--test_filepath", type=str, default="train2.txt",
                         help="Path to the test sample file.")
-    parser.add_argument("--algorithm", type=str, choices=["1", "2", "3"], help="Algorithm to use.")
-    parser.add_argument("--distance", type=str,
-                        choices=["levenshtein", "jaccard", "hamming", "ordinal_hamming"], default="levenshtein",
-                        help="Distance function to use.")
-    parser.add_argument("--outlier_weight", type=float, default="0.5",
-                        help="Weights given to outliers in contrast to regular objects "
-                             "(used in distance based approach).")
-    parser.add_argument("--lower_bound", type=int, help="Lower bound for the number of accepted words.")
-    parser.add_argument("--upper_bound", type=int, help="Upper bound for the number of accepted words.")
-    parser.add_argument("--min_dfa_size", type=int, default=1, help="Minimum DFA size.")
-    parser.add_argument("--numeric_data", action="store_true",
-                        help="Enable numeric data processing mode.")
-    parser.add_argument("--visualize", action="store_true",
-                        help="Visualize the DFA.")
-    parser.add_argument("--verbose", type=int, choices=[0, 1, 2, 3], default=1,
-                        help="Display and save visualization."
-                             " 0 - only critical"
-                             " 1 - show warnings"
-                             " 2 - show info"
-                             " 3 - show debug information")
-    parser.add_argument("--output_path", type=str, default="./dfa.png", help="Path to save the visualization.")
+    add_common_args(parser)
 
     args = parser.parse_args()
 
@@ -110,6 +96,9 @@ def cli():
                            args.distance,
                            args.lower_bound,
                            args.upper_bound,
+                           args.lambda_s,
+                           args.lambda_l,
+                           args.lambda_p,
                            args.min_dfa_size,
                            args.numeric_data,
                            args.verbose,
