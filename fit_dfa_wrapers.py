@@ -6,12 +6,13 @@ from fit_dfa import fit_minimal_dfa, fit_distance_based_dfa
 
 
 def fit_dfa(sample: List[Tuple[str, ...]], alphabet: Set[str], algorithm_number: str,
-            lower_bound: int, upper_bound: int, min_dfa_size: int, distance_function=None, verbose=0):
+            lower_bound: int, upper_bound: int, lambda_s: float, lambda_l: float, lambda_p: float,
+            min_dfa_size: int, distance_function=None, verbose=0):
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
     if algorithm_number in {"1", "2"}:
-        return fit_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size, verbose)
+        return fit_minimal_dfa(sample, alphabet, lower_bound, upper_bound, lambda_s, lambda_l, lambda_p, min_dfa_size, verbose=verbose)
     elif algorithm_number == "3":
-        return fit_distance_based_dfa(sample, alphabet, min_dfa_size, distance_function, verbose)
+        return fit_distance_based_dfa(sample, alphabet, min_dfa_size, distance_function, lambda_s, lambda_l, lambda_p, verbose=verbose)
     return None
 
 
@@ -21,6 +22,9 @@ def fit_and_log_dfa(sample: List[Tuple[str, ...]],
                     distance_function: str,
                     lower_bound: int,
                     upper_bound: int,
+                    lambda_s: float,
+                    lambda_l: float,
+                    lambda_p: float,
                     min_dfa_size: int,
                     verbose: int = 0,
                     visualize: bool = False,
@@ -30,7 +34,7 @@ def fit_and_log_dfa(sample: List[Tuple[str, ...]],
     If visualization is enabled, saves the DFA visualization to the given path.
     """
     distance_func = distance_function_names.get(distance_function)
-    dfa = fit_dfa(sample, alphabet, algorithm_number, lower_bound, upper_bound, min_dfa_size, distance_func, verbose)
+    dfa = fit_dfa(sample, alphabet, algorithm_number, lower_bound, upper_bound, lambda_s, lambda_l, lambda_p, min_dfa_size, distance_func, verbose)
 
     if dfa:
         log_dfa_info(dfa)
@@ -53,6 +57,9 @@ def fit_dfa_from_file(sample_filepath: str,
                       distance_function: str,
                       lower_bound: int,
                       upper_bound: int,
+                      lambda_s: float,
+                      lambda_l: float,
+                      lambda_p: float,
                       min_dfa_size: int,
                       is_numeric_data: bool = False,
                       verbose: int = 0,
@@ -72,6 +79,9 @@ def fit_dfa_from_file(sample_filepath: str,
                     distance_function,
                     lower_bound,
                     upper_bound,
+                    lambda_s,
+                    lambda_l,
+                    lambda_p,
                     min_dfa_size,
                     verbose,
                     visualize,

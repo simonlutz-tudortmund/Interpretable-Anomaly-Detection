@@ -3,6 +3,7 @@ from graphviz import Digraph
 import os
 from typing import List, Tuple, Optional, Set
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from distance_functions import distance_function_names
 
 
 def calculate_metrics(true_labels, predicted_labels):
@@ -46,6 +47,38 @@ def log_metrics(metrics):
     logging.info(f"Confusion Matrix:\n{metrics['confusion_matrix']}")
 
 
+def add_common_args(parser):
+    """
+    add common arguments to arguments parser
+    """
+    parser.add_argument("--algorithm", type=str, choices=["1", "2", "3"], help="Algorithm to use.")
+    parser.add_argument("--distance", type=str,
+                        choices=distance_function_names.keys(), default="levenshtein",
+                        help="Distance function to use.")
+    parser.add_argument("--outlier_weight", type=float, default="0.5",
+                        help="Weights given to outliers in contrast to regular objects "
+                             "(used in distance based approach).")
+    parser.add_argument("--lower_bound", type=int, help="Lower bound for the number of accepted words.")
+    parser.add_argument("--upper_bound", type=int, help="Upper bound for the number of accepted words.")
+
+    parser.add_argument("--lambda_l", type=float, default=0, help="Penalisation coefficient for sink nodes.")
+    parser.add_argument("--lambda_s", type=float, default=0, help="Penalisation coefficient for self-loops.")
+    parser.add_argument("--lambda_p", type=float, default=0, help="Penalisation coefficient for parallel edges.")
+
+    parser.add_argument("--min_dfa_size", type=int, default=1, help="Minimum DFA size.")
+    parser.add_argument("--numeric_data", action="store_true",
+                        help="Enable numeric data processing mode.")
+    parser.add_argument("--visualize", action="store_true",
+                        help="Visualize the DFA.")
+    parser.add_argument("--verbose", type=int, choices=[0, 1, 2, 3], default=1,
+                        help="Display and save visualization."
+                             " 0 - only critical"
+                             " 1 - show warnings"
+                             " 2 - show info"
+                             " 3 - show debug information")
+    parser.add_argument("--output_path", type=str, default="./dfa.png", help="Path to save the visualization.")
+
+
 def get_prefixes(sample, start_token=""):
     prefixes = {(start_token,)} | {tuple(pref) for word in sample for pref in
                                    (tuple(word[:i + 1]) for i in range(len(word)))}
@@ -56,13 +89,13 @@ def read_sample_from_file(
     filepath: str,
     delimiter: str = ";",
     is_numeric: bool = False,
-    numeric_precision: int = 2,
+    numeric_precision: int = 1,
     is_labeled: bool = False,
     label_delimiter: str = ","
 ) -> Tuple[List[Tuple[str, ...]], Set[str], Optional[List[str]]]:
     """
     Reads a sample from a file where each line represents one word, with letters/numbers separated by a delimiter.
-    Supports numerical values with rounding and labeled samples.
+    Supports numerical values with rounding and labeled samples. Ignores duplicate words while preserving order.
 
     Parameters:
     - filepath (str): Path to the input file.
@@ -78,6 +111,7 @@ def read_sample_from_file(
     - labels (Optional[List[str]]): List of labels if `is_labeled` is True, otherwise None.
     """
     sample = []
+    seen = set()
     alphabet = set()
     labels = [] if is_labeled else None
 
@@ -86,25 +120,30 @@ def read_sample_from_file(
             line = line.strip()
             if is_labeled:
                 word_part, label = line.rsplit(label_delimiter, 1)
-                labels.append(label.strip())
+                label = label.strip()
             else:
                 word_part = line
 
             tokens = word_part.split(delimiter)
             if is_numeric:
-                tokens = tuple(str(round(float(token), numeric_precision)) for token in tokens)
+                #tokens = tuple(str(round(float(token), numeric_precision)) for token in tokens)
+                tokens = tuple(round(float(token), numeric_precision) for token in tokens)
             else:
                 tokens = tuple(tokens)
 
-            sample.append(tokens)
-            alphabet.update(tokens)
+            if tokens not in seen:
+                seen.add(tokens)
+                sample.append(tokens)
+                alphabet.update(tokens)
+                if is_labeled:
+                    labels.append(label)
 
     if is_labeled:
         return sample, alphabet, labels
     return sample, alphabet
 
 
-def load_sample(filepath: str, is_numeric: bool, numeric_precision: int = 2, is_labeled: bool = False):
+def load_sample(filepath: str, is_numeric: bool, numeric_precision: int = 1, is_labeled: bool = False):
     """Loads a sample from a file and returns the parsed sample, alphabet, and labels if applicable."""
     try:
         return read_sample_from_file(filepath, is_numeric=is_numeric, numeric_precision=numeric_precision, is_labeled=is_labeled)

@@ -2,7 +2,40 @@ from gurobipy import GRB
 from distance_functions import find_max_dist
 
 
-def set_bounded_objective(model, states, sample, alpha, lower_bound, upper_bound):
+def add_sink_state_penalty(model, states, transitions, alphabet, lambda_s, sink_state_index=1):
+    """Add penalty for transitions not leading to the sink state."""
+    sink_state = states[sink_state_index]  # Assuming the second state is the sink
+    penalty = lambda_s * sum(1 - transitions[q, a, sink_state] for q in states for a in alphabet)
+    model.setObjective(model.getObjective() + penalty, GRB.MINIMIZE)
+
+
+def add_self_loop_penalty(model, states, transitions, alphabet, lambda_l):
+    """Add penalty for transitions that are not self-loops."""
+    penalty = lambda_l * sum(transitions[q, a, q0] for q in states for a in alphabet for q0 in states if q0 != q)
+    model.setObjective(model.getObjective() + penalty, GRB.MINIMIZE)
+
+
+def add_parallel_edge_penalty(model, states, transitions, alphabet, lambda_p, eq):
+    """Add penalty for multiple successor states."""
+    for q in states:
+        for q0 in states:
+            model.addConstr(eq[q, q0] <= sum(transitions[q, a, q0] for a in alphabet))
+            for a in alphabet:
+                model.addConstr(eq[q, q0] >= transitions[q, a, q0])
+    penalty = lambda_p * sum(eq[q, q0] for q in states for q0 in states)
+    model.setObjective(model.getObjective() + penalty, GRB.MINIMIZE)
+
+
+def add_penalties(model, states, transitions, alphabet, lambda_s, lambda_l, lambda_p, eq):
+    if lambda_s != 0:
+        add_sink_state_penalty(model, states, transitions, alphabet, lambda_s)
+    if lambda_l != 0:
+        add_self_loop_penalty(model, states, transitions, alphabet, lambda_l)
+    if lambda_p != 0:
+        add_parallel_edge_penalty(model, states, transitions, alphabet, lambda_p, eq)
+
+
+def set_bounded_objective(model, states, sample, alpha, lower_bound, upper_bound, transitions, alphabet, lambda_s=0, lambda_l=0, lambda_p=0, eq=None):
     """Set the objective function for the model.
 
     - model: Gurobi model.
@@ -16,6 +49,7 @@ def set_bounded_objective(model, states, sample, alpha, lower_bound, upper_bound
         model.setObjective(sum(alpha[w, q] for w in sample for q in states), GRB.MINIMIZE)
     elif upper_bound:
         model.setObjective(sum(alpha[w, q] for w in sample for q in states), GRB.MAXIMIZE)
+    add_penalties(model, states, transitions, alphabet, lambda_s, lambda_l, lambda_p, eq)
 
 
 def add_distance_based_objective(model,
@@ -24,8 +58,14 @@ def add_distance_based_objective(model,
                                  gamma,
                                  betta,
                                  distance_matrix,
+                                 states,
+                                 transitions,
                                  reg_constant=0,
-                                 outlier_weight=0.5):
+                                 outlier_weight=0.5,
+                                 lambda_s=0,
+                                 lambda_l=0,
+                                 lambda_p=0,
+                                 eq=None):
     """
     Add an objective to a Gurobi model based on distances between sequences.
 
@@ -48,3 +88,4 @@ def add_distance_based_objective(model,
     ) + sum(reg_constant * accepted[sample[i]] for i in range(n))
 
     model.setObjective(objective, GRB.MINIMIZE)
+    add_penalties(model, states, transitions, lambda_s, lambda_l, lambda_p, eq)

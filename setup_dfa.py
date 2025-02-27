@@ -31,23 +31,23 @@ def setup_model(n, alphabet, prefixes):
     model = Model(f"DFA_size_{n}")
     states = range(n)
 
-    delta = model.addVars(states, alphabet, states, vtype=GRB.BINARY, name="delta")
+    transitions = model.addVars(states, alphabet, states, vtype=GRB.BINARY, name="transitions")
     final_states = model.addVars(states, vtype=GRB.BINARY, name="f")
-    x = model.addVars(((w, q) for w in prefixes for q in states), vtype=GRB.BINARY, name="x")
-    return model, states, delta, final_states, x
+    x = model.addVars(((w, q) for w in prefixes for q in states), vtype=GRB.BINARY)
+    return model, states, transitions, final_states, x
 
 
 def set_dfa(sample, alphabet, dfa_size, prefixes=None, start_token="", verbose=0):
     if prefixes is None:
         prefixes = get_prefixes(sample, start_token)
 
-    model, states, delta, final_states, x = setup_model(dfa_size, alphabet, prefixes)
+    model, states, transitions, final_states, x = setup_model(dfa_size, alphabet, prefixes)
     model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
 
-    add_transition_constraints(model, states, alphabet, delta)
+    add_transition_constraints(model, states, alphabet, transitions)
     add_prefix_constraints(model, states, prefixes, x)
     add_initial_state_constraint(model, x, "")
-    add_transition_follow_constraints(model, states, prefixes, alphabet, x, delta)
+    add_transition_follow_constraints(model, states, prefixes, alphabet, x, transitions)
     alpha = add_alpha_constraints(model, states, sample, x, final_states)
 
-    return model, states, delta, final_states, alpha
+    return model, states, transitions, final_states, alpha
