@@ -4,7 +4,7 @@ from distance_functions import find_max_dist
 
 def add_sink_state_penalty(model, states, transitions, alphabet, lambda_s, sink_state_index=1):
     """Add penalty for transitions not leading to the sink state."""
-    sink_state = states[sink_state_index]  # Assuming the second state is the sink
+    sink_state = states[sink_state_index]
     penalty = lambda_s * sum(1 - transitions[q, a, sink_state] for q in states for a in alphabet)
     model.setObjective(model.getObjective() + penalty, GRB.MINIMIZE)
 
@@ -60,7 +60,8 @@ def add_distance_based_objective(model,
                                  distance_matrix,
                                  states,
                                  transitions,
-                                 reg_constant=0,
+                                 alphabet,
+                                 reg_constant=33.8,
                                  outlier_weight=0.5,
                                  lambda_s=0,
                                  lambda_l=0,
@@ -88,4 +89,4 @@ def add_distance_based_objective(model,
     ) + sum(reg_constant * accepted[sample[i]] for i in range(n))
 
     model.setObjective(objective, GRB.MINIMIZE)
-    add_penalties(model, states, transitions, lambda_s, lambda_l, lambda_p, eq)
+    add_penalties(model, states, transitions, alphabet, lambda_s, lambda_l, lambda_p, eq)

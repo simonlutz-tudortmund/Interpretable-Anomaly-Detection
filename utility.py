@@ -17,7 +17,7 @@ def calculate_metrics(true_labels, predicted_labels):
     Returns:
     - A dictionary with accuracy, precision, recall, f1_score, and confusion matrix.
     """
-    label_map = {'accept': 1, 'reject': 0}
+    label_map = {'accept': 1, 'reject': 0, '1': 1, '0': 0}
     true_labels_numeric = [label_map[label] for label in true_labels]
     predicted_labels_numeric = [label_map[label] for label in predicted_labels]
 
@@ -58,8 +58,8 @@ def add_common_args(parser):
     parser.add_argument("--outlier_weight", type=float, default="0.5",
                         help="Weights given to outliers in contrast to regular objects "
                              "(used in distance based approach).")
-    parser.add_argument("--lower_bound", type=int, help="Lower bound for the number of accepted words.")
-    parser.add_argument("--upper_bound", type=int, help="Upper bound for the number of accepted words.")
+    parser.add_argument("--lower_bound", type=float, help="Lower bound for the number of accepted words.")
+    parser.add_argument("--upper_bound", type=float, help="Upper bound for the number of accepted words.")
 
     parser.add_argument("--lambda_l", type=float, default=0, help="Penalisation coefficient for sink nodes.")
     parser.add_argument("--lambda_s", type=float, default=0, help="Penalisation coefficient for self-loops.")
@@ -87,11 +87,11 @@ def get_prefixes(sample, start_token=""):
 
 def read_sample_from_file(
     filepath: str,
-    delimiter: str = ";",
+    delimiter: str = ",",
     is_numeric: bool = False,
     numeric_precision: int = 1,
     is_labeled: bool = False,
-    label_delimiter: str = ","
+    label_delimiter: str = ";"
 ) -> Tuple[List[Tuple[str, ...]], Set[str], Optional[List[str]]]:
     """
     Reads a sample from a file where each line represents one word, with letters/numbers separated by a delimiter.

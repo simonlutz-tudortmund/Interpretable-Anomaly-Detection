@@ -7,6 +7,7 @@ from utility import add_common_args
 def cli():
     parser = argparse.ArgumentParser(description="Learn a DFA from a sample.")
     parser.add_argument("--filepath", type=str, default="train2.txt", help="Path to the sample file.")
+    parser.add_argument("--pointwise", action="store_true", help="pointwise detection.")
     add_common_args(parser)
 
     args = parser.parse_args()
@@ -32,7 +33,8 @@ def cli():
                       args.numeric_data,
                       args.verbose,
                       args.visualize,
-                      args.output_path)
+                      args.output_path,
+                      args.pointwise)
 
 
 if __name__ == "__main__":

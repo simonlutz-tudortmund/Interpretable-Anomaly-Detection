@@ -12,13 +12,16 @@ from setup_dfa import initialize_prefixes_and_bounds, set_dfa
 
 
 def fit_minimal_dfa(sample, alphabet, lower_bound, upper_bound, lambda_s, lambda_l, lambda_p, min_dfa_size=1,
-                    start_token="", verbose=0):
+                    start_token="", verbose=0, pointwise=False):
     prefixes, max_dfa_size = initialize_prefixes_and_bounds(sample,
                                                             alphabet,
                                                             lower_bound,
                                                             upper_bound,
                                                             min_dfa_size,
                                                             start_token)
+
+    if pointwise:
+        sample = prefixes
 
     for dfa_size in range(min_dfa_size, max_dfa_size):
         model, states, transitions, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token, verbose)
@@ -35,8 +38,12 @@ def fit_minimal_dfa(sample, alphabet, lower_bound, upper_bound, lambda_s, lambda
     return None
 
 
-def fit_distance_based_dfa(sample, alphabet, dfa_size, distance_function, outlier_weight=0.5, lambda_s=0, lambda_l=0, lambda_p=0, start_token="", verbose=0):
+def fit_distance_based_dfa(sample, alphabet, dfa_size, distance_function, outlier_weight=0.5, lambda_s=0, lambda_l=0, lambda_p=0, start_token="", verbose=0,  pointwise=False):
     prefixes = get_prefixes(sample, start_token)
+
+    if pointwise:
+        sample = prefixes
+
     model, states, transitions, final_states, alpha = set_dfa(sample, alphabet, dfa_size, prefixes, start_token, verbose)
     accepted = add_accepted_constraints(model, states, sample, alpha)
 
@@ -47,7 +54,7 @@ def fit_distance_based_dfa(sample, alphabet, dfa_size, distance_function, outlie
 
     distance_matrix = calculate_distance_matrix(sample, distance_function)
     add_distance_based_objective(model, sample, accepted, gamma, betta, distance_matrix, states, transitions,
-                                 outlier_weight, lambda_s, lambda_l, lambda_p, eq)
+                                 alphabet, outlier_weight=outlier_weight, lambda_s=lambda_s, lambda_l=lambda_l, lambda_p=lambda_p, eq=eq)
 
     model.optimize()
 
