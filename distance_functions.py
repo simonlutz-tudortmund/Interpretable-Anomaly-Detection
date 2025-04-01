@@ -52,7 +52,7 @@ distance_function_names = {
     "jaccard": jaccard_distance,
     "hamming": hamming_distance,
     "ordinal_hamming": ordinal_hamming_distance,
-    "dynamic_time_warping": dtw_distance
+    "dynamic_time_warping": dtw_distance,
 }
 
 
@@ -63,7 +63,7 @@ def find_max_dist(distance_matrix: np.ndarray) -> float:
 
 def calculate_distance_matrix(
     sample: List[Tuple[str, ...]],
-    distance_func: Callable[[Tuple[str, ...], Tuple[str, ...]], float]
+    distance_func: Callable[[Tuple[str, ...], Tuple[str, ...]], float],
 ) -> np.ndarray:
     """
     Calculate a distance matrix between all pairs of sequences in the sample.
