@@ -3,3 +3,5 @@ argparse~=1.4.0
 editdistance~=0.8.1
 numpy~=1.24.3
 scikit-learn~=1.5.1
+dtaidistance
+graphviz
