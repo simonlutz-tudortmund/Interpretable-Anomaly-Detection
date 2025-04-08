@@ -121,6 +121,7 @@ class Problem:
         #                                           Optimization intial objective:
         ########################################################################################################################
         if lower_bound and upper_bound:
+            self.model.setParam("MIPFocus", 1)
             self.model.setObjective(1, GRB.MINIMIZE)
         elif lower_bound:
             self.model.setObjective(
@@ -128,7 +129,7 @@ class Problem:
                 GRB.MINIMIZE,
             )
         elif upper_bound:
-            self.model.setObjective(self.alpha.sum(), GRB.MAXIMIZE)
+            self.model.setObjective(-1 * self.alpha.sum(), GRB.MINIMIZE)
 
     def add_sink_state_penalty(self, lambda_s, sink_state_index=1):
         """Add penalty for transitions not leading to the sink state."""

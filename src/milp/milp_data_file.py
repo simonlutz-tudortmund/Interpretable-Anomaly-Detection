@@ -3,6 +3,7 @@
 import itertools
 import logging
 from math import ceil, floor
+from typing import Optional
 
 from gurobipy import GRB
 
@@ -14,9 +15,9 @@ def learn_dfa(
     alphabet: frozenset[str],
     lower_bound: float,
     upper_bound: float,
-    lambda_s: float,
-    lambda_l: float,
-    lambda_p: float,
+    lambda_s: Optional[float],
+    lambda_l: Optional[float],
+    lambda_p: Optional[float],
     min_dfa_size: int,
     verbose=0,
     pointwise=False,
@@ -43,15 +44,25 @@ def learn_dfa(
 
         problem = Problem(N, alphabet)
         problem.model.setParam("Threads", 1)
+
+        # Avoid Simplex Degen Moves
+        problem.model.setParam("DegenMoves", 0)
+        # Avoid Simplex
         problem.model.setParam("Method", 0)
+        problem.model.setParam("Crossover", 2)
+        problem.model.setParam("NodeMethod", 2)
+
         problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
 
         problem.add_sample_constraints(
             sample=sample, lower_bound=lower_bound, upper_bound=upper_bound
         )
-        problem.add_parallel_edge_penalty(lambda_p=lambda_p)
-        problem.add_self_loop_penalty(lambda_l=lambda_l)
-        problem.add_sink_state_penalty(lambda_s=lambda_s)
+        if lambda_l:
+            problem.add_self_loop_penalty(lambda_l=lambda_l)
+        if lambda_p:
+            problem.add_parallel_edge_penalty(lambda_p=lambda_p)
+        if lambda_s:
+            problem.add_sink_state_penalty(lambda_s=lambda_s)
 
         problem.model.update()
         logging.warning(
