@@ -1,3 +1,4 @@
+import logging
 from typing import List, Tuple
 from gurobipy import GRB, Model
 from distance_functions import calculate_distance_matrix
@@ -34,6 +35,9 @@ def fit_minimal_dfa(
         sample = prefixes
 
     for dfa_size in range(min_dfa_size, max_dfa_size):
+        logging.warning(
+            f"\x1b[1;35m Trying to solve DFA with {dfa_size} states  \x1b[m"
+        )
         model, states, transitions, final_states, alpha = set_dfa(
             sample, alphabet, dfa_size, prefixes, start_token, verbose
         )
@@ -57,7 +61,13 @@ def fit_minimal_dfa(
             lambda_p,
             eq,
         )
+        model.update()
 
+        logging.warning(
+            "\x1b[1;34m... translated to {} constraints of {} vars.\x1b[m".format(
+                model.NumVars, model.NumConstrs
+            )
+        )
         model.optimize()
         solution = extract_dfa_solution(
             model, states, alphabet, transitions, final_states
