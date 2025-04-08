@@ -2,8 +2,14 @@ import logging
 from graphviz import Digraph
 import os
 from typing import List, Tuple, Optional, Set
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from distance_functions import distance_function_names
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+)
+from src.distance_functions import distance_function_names
 
 
 def calculate_metrics(true_labels, predicted_labels):
@@ -17,7 +23,7 @@ def calculate_metrics(true_labels, predicted_labels):
     Returns:
     - A dictionary with accuracy, precision, recall, f1_score, and confusion matrix.
     """
-    label_map = {'accept': 1, 'reject': 0, '1': 1, '0': 0}
+    label_map = {"accept": 1, "reject": 0, "1": 1, "0": 0}
     true_labels_numeric = [label_map[label] for label in true_labels]
     predicted_labels_numeric = [label_map[label] for label in predicted_labels]
 
@@ -26,7 +32,9 @@ def calculate_metrics(true_labels, predicted_labels):
         "precision": precision_score(true_labels_numeric, predicted_labels_numeric),
         "recall": recall_score(true_labels_numeric, predicted_labels_numeric),
         "f1_score": f1_score(true_labels_numeric, predicted_labels_numeric),
-        "confusion_matrix": confusion_matrix(true_labels_numeric, predicted_labels_numeric),
+        "confusion_matrix": confusion_matrix(
+            true_labels_numeric, predicted_labels_numeric
+        ),
     }
 
     return metrics
@@ -51,37 +59,85 @@ def add_common_args(parser):
     """
     add common arguments to arguments parser
     """
-    parser.add_argument("--algorithm", type=str, choices=["1", "2", "3"], help="Algorithm to use.")
-    parser.add_argument("--distance", type=str,
-                        choices=distance_function_names.keys(), default="levenshtein",
-                        help="Distance function to use.")
-    parser.add_argument("--outlier_weight", type=float, default="0.5",
-                        help="Weights given to outliers in contrast to regular objects "
-                             "(used in distance based approach).")
-    parser.add_argument("--lower_bound", type=float, help="Lower bound for the number of accepted words.")
-    parser.add_argument("--upper_bound", type=float, help="Upper bound for the number of accepted words.")
+    parser.add_argument(
+        "--algorithm", type=str, choices=["1", "2", "3"], help="Algorithm to use."
+    )
+    parser.add_argument(
+        "--distance",
+        type=str,
+        choices=distance_function_names.keys(),
+        default="levenshtein",
+        help="Distance function to use.",
+    )
+    parser.add_argument(
+        "--outlier_weight",
+        type=float,
+        default="0.5",
+        help="Weights given to outliers in contrast to regular objects "
+        "(used in distance based approach).",
+    )
+    parser.add_argument(
+        "--lower_bound",
+        type=float,
+        help="Lower bound for the number of accepted words.",
+    )
+    parser.add_argument(
+        "--upper_bound",
+        type=float,
+        help="Upper bound for the number of accepted words.",
+    )
 
-    parser.add_argument("--lambda_l", type=float, default=0, help="Penalisation coefficient for sink nodes.")
-    parser.add_argument("--lambda_s", type=float, default=0, help="Penalisation coefficient for self-loops.")
-    parser.add_argument("--lambda_p", type=float, default=0, help="Penalisation coefficient for parallel edges.")
+    parser.add_argument(
+        "--lambda_l",
+        type=float,
+        default=0,
+        help="Penalisation coefficient for sink nodes.",
+    )
+    parser.add_argument(
+        "--lambda_s",
+        type=float,
+        default=0,
+        help="Penalisation coefficient for self-loops.",
+    )
+    parser.add_argument(
+        "--lambda_p",
+        type=float,
+        default=0,
+        help="Penalisation coefficient for parallel edges.",
+    )
 
     parser.add_argument("--min_dfa_size", type=int, default=1, help="Minimum DFA size.")
-    parser.add_argument("--numeric_data", action="store_true",
-                        help="Enable numeric data processing mode.")
-    parser.add_argument("--visualize", action="store_true",
-                        help="Visualize the DFA.")
-    parser.add_argument("--verbose", type=int, choices=[0, 1, 2, 3], default=1,
-                        help="Display and save visualization."
-                             " 0 - only critical"
-                             " 1 - show warnings"
-                             " 2 - show info"
-                             " 3 - show debug information")
-    parser.add_argument("--output_path", type=str, default="./dfa.png", help="Path to save the visualization.")
+    parser.add_argument(
+        "--numeric_data",
+        action="store_true",
+        help="Enable numeric data processing mode.",
+    )
+    parser.add_argument("--visualize", action="store_true", help="Visualize the DFA.")
+    parser.add_argument(
+        "--verbose",
+        type=int,
+        choices=[0, 1, 2, 3],
+        default=1,
+        help="Display and save visualization."
+        " 0 - only critical"
+        " 1 - show warnings"
+        " 2 - show info"
+        " 3 - show debug information",
+    )
+    parser.add_argument(
+        "--output_path",
+        type=str,
+        default="./dfa.png",
+        help="Path to save the visualization.",
+    )
 
 
 def get_prefixes(sample, start_token=""):
-    prefixes = {(start_token,)} | {tuple(pref) for word in sample for pref in
-                                   (tuple(word[:i + 1]) for i in range(len(word)))}
+    prefixes = {(start_token,)} | {
+        tuple(pref)
+        for word in sample
+        for pref in (tuple(word[: i + 1]) for i in range(len(word)))
+    }
     return prefixes
 
 
@@ -91,7 +147,7 @@ def read_sample_from_file(
     is_numeric: bool = False,
     numeric_precision: int = 1,
     is_labeled: bool = False,
-    label_delimiter: str = ";"
+    label_delimiter: str = ";",
 ) -> Tuple[List[Tuple[str, ...]], Set[str], Optional[List[str]]]:
     """
     Reads a sample from a file where each line represents one word, with letters/numbers separated by a delimiter.
@@ -115,7 +171,7 @@ def read_sample_from_file(
     alphabet = set()
     labels = [] if is_labeled else None
 
-    with open(filepath, 'r') as file:
+    with open(filepath, "r") as file:
         for line in file:
             line = line.strip()
             if is_labeled:
@@ -126,8 +182,10 @@ def read_sample_from_file(
 
             tokens = word_part.split(delimiter)
             if is_numeric:
-                #tokens = tuple(str(round(float(token), numeric_precision)) for token in tokens)
-                tokens = tuple(round(float(token), numeric_precision) for token in tokens)
+                # tokens = tuple(str(round(float(token), numeric_precision)) for token in tokens)
+                tokens = tuple(
+                    round(float(token), numeric_precision) for token in tokens
+                )
             else:
                 tokens = tuple(tokens)
 
@@ -143,10 +201,20 @@ def read_sample_from_file(
     return sample, alphabet
 
 
-def load_sample(filepath: str, is_numeric: bool, numeric_precision: int = 1, is_labeled: bool = False):
+def load_sample(
+    filepath: str,
+    is_numeric: bool,
+    numeric_precision: int = 1,
+    is_labeled: bool = False,
+):
     """Loads a sample from a file and returns the parsed sample, alphabet, and labels if applicable."""
     try:
-        return read_sample_from_file(filepath, is_numeric=is_numeric, numeric_precision=numeric_precision, is_labeled=is_labeled)
+        return read_sample_from_file(
+            filepath,
+            is_numeric=is_numeric,
+            numeric_precision=numeric_precision,
+            is_labeled=is_labeled,
+        )
     except FileNotFoundError:
         logging.critical(f"File {filepath} not found.")
         return None, None, None
@@ -181,14 +249,14 @@ def save_visualized_dfa(dfa, output_path="dfa"):
 
     dot = Digraph(format="png")
 
-    for state in dfa['states']:
-        shape = "doublecircle" if state in dfa['final_states'] else "circle"
+    for state in dfa["states"]:
+        shape = "doublecircle" if state in dfa["final_states"] else "circle"
         dot.node(str(state), shape=shape)
 
     dot.node("start", shape="none", width="0")
-    dot.edge("start", str(dfa['initial_state']))
+    dot.edge("start", str(dfa["initial_state"]))
 
-    for (state, symbol), next_state in dfa['transitions'].items():
+    for (state, symbol), next_state in dfa["transitions"].items():
         dot.edge(str(state), str(next_state), label=str(symbol))
 
     dot.render(output_path, cleanup=True)
@@ -199,9 +267,9 @@ def evaluate_sample_with_dfa(sample, dfa):
     accepted = []
     rejected = []
 
-    transitions = dfa['transitions']
-    initial_state = dfa['initial_state']
-    final_states = dfa['final_states']
+    transitions = dfa["transitions"]
+    initial_state = dfa["initial_state"]
+    final_states = dfa["final_states"]
 
     for word in sample:
         current_state = initial_state
@@ -211,7 +279,7 @@ def evaluate_sample_with_dfa(sample, dfa):
             if (current_state, symbol) in transitions:
                 current_state = transitions[(current_state, symbol)]
             else:
-                accepted_word = (current_state in final_states)
+                accepted_word = current_state in final_states
                 break
 
         if accepted_word and current_state in final_states:
