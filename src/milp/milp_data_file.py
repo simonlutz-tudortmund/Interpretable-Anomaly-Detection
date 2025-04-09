@@ -45,7 +45,7 @@ def learn_dfa(
         problem = Problem(N, alphabet)
         problem.model.setParam("Threads", 1)
 
-        # Avoid Simplex Degen Moves
+        # Avoid Simplex Degen Moves after Root relaxation
         problem.model.setParam("DegenMoves", 0)
         # Avoid Simplex
         problem.model.setParam("Method", 0)
@@ -54,6 +54,7 @@ def learn_dfa(
 
         problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
 
+        problem.add_automaton_constraints()
         problem.add_sample_constraints(
             sample=sample, lower_bound=lower_bound, upper_bound=upper_bound
         )

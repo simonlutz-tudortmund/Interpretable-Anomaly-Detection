@@ -19,9 +19,8 @@ class Problem:
 
     def restart(self):
         self.model = Model(f"Hypothesis_{self.N}")
-        self.generate_clauses_automaton()
 
-    def generate_clauses_automaton(self):
+    def add_automaton_constraints(self):
         self.states = range(self.N)
 
         ########################################################################################################################
@@ -129,7 +128,7 @@ class Problem:
                 GRB.MINIMIZE,
             )
         elif upper_bound:
-            self.model.setObjective(-1 * self.alpha.sum(), GRB.MINIMIZE)
+            self.model.setObjective(self.alpha.sum(), GRB.MAXIMIZE)
 
     def add_sink_state_penalty(self, lambda_s, sink_state_index=1):
         """Add penalty for transitions not leading to the sink state."""

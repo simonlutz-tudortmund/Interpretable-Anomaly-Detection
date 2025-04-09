@@ -1,4 +1,4 @@
-from typing import List, Optional, Set
+from typing import List, Optional
 
 
 class CausalDFA:
@@ -42,9 +42,6 @@ class CausalDFA:
         """Check if a sequence is accepted by the DFA using the 'in' operator."""
         return self.run(input_sequence=sequence)
 
-    def export_as_reward_automaton(self, file_path):
-        return file_path
-
     def __eq__(self, other):
         """
         Check if this CausalDFA is equal to another CausalDFA.
@@ -75,44 +72,6 @@ class CausalDFA:
                 self.initial_state,
             )
         )
-
-    def _find_paths(
-        self, start: int, end: int, visited: Set[int], max_depth: int = 10
-    ) -> List[List[tuple]]:
-        """
-        Find all possible simple paths from start state to end state, up to a maximum depth.
-
-        Args:
-            start: The starting state.
-            end: The destination state.
-            visited: Set of already visited states to avoid cycles.
-            max_depth: Maximum depth of paths to explore to prevent infinite loops.
-
-        Returns:
-            List of paths, where each path is a list of (state, symbol, next_state) tuples.
-        """
-        if start == end:
-            return [[]]  # Empty path if we're already at the end
-
-        if start in visited or len(visited) >= max_depth:
-            return []  # Prevent cycles or too deep paths
-
-        visited_copy = visited.copy()
-        visited_copy.add(start)
-
-        all_paths = []
-
-        # If the start state has transitions
-        if start in self.transitions:
-            for symbol, next_state in self.transitions[start].items():
-                # Find all paths from next_state to end
-                next_paths = self._find_paths(next_state, end, visited_copy, max_depth)
-
-                # Prepend the current transition to each path
-                for path in next_paths:
-                    all_paths.append([(start, symbol, next_state)] + path)
-
-        return all_paths
 
 
 class DFABuilder:
