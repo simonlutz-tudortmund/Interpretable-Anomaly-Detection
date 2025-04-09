@@ -38,11 +38,11 @@ df["Features"] = df["Features"].apply(convert_to_tuple)
 
 # 75% of data
 # df_pruned = df[~df["Features"].duplicated() & (df["Features"].apply(len) <= 20)]
-df_pruned = df[df["Features"].apply(len) <= 115]
+df_pruned = df[df["Features"].apply(len) <= 30]
 
 df_unique = df_pruned[~df_pruned["Features"].duplicated()]
-lower_bound = 0.025
-upper_bound = 0.03
+lower_bound = 0.2
+upper_bound = 0.21
 sample = df_unique["Features"].values.tolist()
 alphabet = frozenset(value for trace in sample for value in trace)
 
@@ -81,3 +81,39 @@ print("\nClassification Report:")
 print(classification_report(labels, predictions, target_names=["Fail", "Success"]))
 
 print(dfa)
+
+from src.utils.dfa import CausalDFA
+from graphviz import Digraph
+
+
+def save_visualized_dfa(dfa: CausalDFA, output_path="dfa"):
+    """
+    Generates a visualization of a DFA and saves it as an image.
+
+    Parameters:
+    - dfa (dict): A dictionary representing the DFA with keys:
+        'states' (iterable): The set of states.
+        'alphabet' (set): The set of input symbols.
+        'transitions' (dict): A mapping from (state, symbol) to next state.
+        'initial_state' (int/str): The initial state.
+        'final_states' (set): The set of accepting states.
+    - output_path (str): Path to save the resulting image (without extension).
+    """
+    dot = Digraph(format="png")
+
+    for state in dfa.states:
+        shape = "doublecircle" if state in dfa.final_states else "circle"
+        dot.node(str(state), shape=shape)
+
+    dot.node("start", shape="none", width="0")
+    dot.edge("start", str(dfa.initial_state))
+
+    for state in dfa.states:
+        for symbol, next_state in dfa.transitions[state].items():
+            if state != next_state:
+                dot.edge(str(state), str(next_state), label=str(symbol))
+
+    dot.render(output_path, cleanup=True)
+
+
+save_visualized_dfa(dfa)

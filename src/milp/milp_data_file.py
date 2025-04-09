@@ -45,12 +45,20 @@ def learn_dfa(
         problem = Problem(N, alphabet)
         problem.model.setParam("Threads", 1)
 
-        # Avoid Simplex Degen Moves after Root relaxation
-        problem.model.setParam("DegenMoves", 0)
-        # Avoid Simplex
-        problem.model.setParam("Method", 0)
-        problem.model.setParam("Crossover", 2)
+        problem.model.setParam("Presolve", 2)
+        problem.model.setParam("NoRelHeurTime", 1800)
+        problem.model.setParam("Cuts", 0)
+
+        problem.model.setParam("Method", 2)
+        problem.model.setParam("Crossover", 0)
         problem.model.setParam("NodeMethod", 2)
+
+        # # Avoid Simplex Degen Moves after Root relaxation
+        # problem.model.setParam("DegenMoves", 0)
+        # # Avoid Simplex
+        # problem.model.setParam("Method", 2)
+        # problem.model.setParam("Crossover", 0)
+        # problem.model.setParam("NodeMethod", 2)
 
         problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
 

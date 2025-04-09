@@ -121,13 +121,15 @@ class Problem:
         ########################################################################################################################
         if lower_bound and upper_bound:
             self.model.setParam("MIPFocus", 1)
-            self.model.setObjective(1, GRB.MINIMIZE)
+            # self.model.setObjective(1, GRB.MINIMIZE)
         elif lower_bound:
+            self.model.setParam("MIPFocus", 2)
             self.model.setObjective(
                 self.alpha.sum(),
                 GRB.MINIMIZE,
             )
         elif upper_bound:
+            self.model.setParam("MIPFocus", 2)
             self.model.setObjective(self.alpha.sum(), GRB.MAXIMIZE)
 
     def add_sink_state_penalty(self, lambda_s, sink_state_index=1):
