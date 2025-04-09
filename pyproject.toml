@@ -1,3 +1,33 @@
+[project]
+name = "interpretable-anomaly-detection"
+version = "2.0.0"
+description = "This project implements an algorithm for learning a minimal Deterministic Finite Automaton (DFA) using the Gurobi optimization solver. The approach is based on a set of constraints and objective functions designed to learn DFA models that accept or reject a given sample of words from an alphabet."
+authors = [
+    {name = "Simon Lutz, Daniil Kaminskyi, Pavel Greshnikov"}
+]
+readme = "README.md"
+package-mode = false
+
+requires-python = ">=3.12"
+dependencies = [
+    "gurobipy (>=12.0.1,<13.0.0)",
+    "argparse (>=1.4.0,<2.0.0)",
+    "pandas (>=2.2.3,<3.0.0)",
+    "numpy (>=2.2.4,<3.0.0)",
+    "editdistance (>=0.8.1,<0.9.0)",
+    "scikit-learn (>=1.6.1,<2.0.0)",
+    "dtaidistance (>=2.3.13,<3.0.0)",
+    "graphviz (>=0.20.3,<0.21.0)",
+    "matplotlib (>=3.10.1,<4.0.0)"
+]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.pytest.ini_options]
 pythonpath = [
   "."

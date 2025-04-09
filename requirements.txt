@@ -1,7 +1,0 @@
-gurobipy
-argparse
-editdistance
-numpy
-scikit-learn
-dtaidistance
-graphviz
