@@ -84,7 +84,7 @@ def add_alpha_constraints(
     return alpha
 
 
-def add_sample_constraints(
+def add_unlabeled_sample_constraints(
     model: Model,
     states: List[str],
     sample: List[Tuple[str]],

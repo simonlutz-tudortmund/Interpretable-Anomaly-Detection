@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 
-from src.milp.milp_data_file import learn_dfa
+from src.milp.milp_data_file import learn_dfa_with_bounds
 from sklearn.metrics import (
     classification_report,
     precision_score,
@@ -46,7 +46,7 @@ upper_bound = 0.21
 sample = df_unique["Features"].values.tolist()
 alphabet = frozenset(value for trace in sample for value in trace)
 
-dfa = learn_dfa(
+dfa = learn_dfa_with_bounds(
     sample=sample,
     alphabet=alphabet,
     lower_bound=lower_bound,

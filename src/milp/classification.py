@@ -84,7 +84,7 @@ class GurobiClassification:
             current_node = current_node.children[letter]
         return current_node.reach_vars
 
-    def generate_clauses_trace(
+    def generate_clauses_unlabeled(
         self, word: list[str], word_index: int, alpha: tupledict[Any, Var]
     ):
         """Add constraints for the word's acceptance based on its label."""
@@ -95,3 +95,16 @@ class GurobiClassification:
             )
             self.model.addConstr(alpha[word_index, q] <= reach_vars[q])
             self.model.addConstr(alpha[word_index, q] <= self.term_vars[q])
+
+    def generate_clauses_labeled(
+        self, word: list[str], word_index: int, positive: bool
+    ):
+        """Add constraints for the word's acceptance based on its label."""
+        reach_vars = self.generate_clauses_word(word)
+        for q in range(self.N):
+            if positive:
+                # Ensure the reached state is accepting for positive examples
+                self.model.addConstr(reach_vars[q] <= self.term_vars[q])
+            else:
+                # Ensure the reached state is not accepting for negative examples
+                self.model.addConstr(reach_vars[q] <= 1 - self.term_vars[q])

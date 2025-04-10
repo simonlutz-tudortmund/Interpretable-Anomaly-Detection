@@ -2,6 +2,7 @@ import logging
 import sys
 from typing import Optional
 from gurobipy import Model, GRB, quicksum
+from numpy import positive
 
 from src.milp.classification import GurobiClassification
 from src.utils.dfa import DFABuilder
@@ -87,7 +88,21 @@ class Problem:
                 builder.tag(p)
         return builder.build()
 
-    def add_sample_constraints(
+    def add_labeled_sample_constraints(
+        self,
+        positive_sample: list[list[str]],
+        negative_sample: list[list[str]],
+    ):
+        for idx, word in enumerate(positive_sample):
+            self.classifier.generate_clauses_labeled(
+                word=word, word_index=idx, positive=True
+            )
+        for idx, word in enumerate(negative_sample):
+            self.classifier.generate_clauses_labeled(
+                word=word, word_index=idx, positive=False
+            )
+
+    def add_unlabeled_sample_constraints(
         self,
         sample: list[list[str]],
         lower_bound: Optional[int] = None,
@@ -98,7 +113,7 @@ class Problem:
             len(sample), self.N, vtype=GRB.BINARY, name="alpha"
         )
         for idx, word in enumerate(sample):
-            self.classifier.generate_clauses_trace(
+            self.classifier.generate_clauses_unlabeled(
                 word=word, word_index=idx, alpha=self.alpha
             )
 
@@ -121,37 +136,46 @@ class Problem:
         ########################################################################################################################
         if lower_bound and upper_bound:
             self.model.setParam("MIPFocus", 1)
-            # self.model.setObjective(1, GRB.MINIMIZE)
+            self.model.ModelSense = GRB.MINIMIZE
         elif lower_bound:
             self.model.setParam("MIPFocus", 2)
-            self.model.setObjective(
-                self.alpha.sum(),
-                GRB.MINIMIZE,
-            )
+            self.model.setObjectiveN(expr=self.alpha.sum(), index=0, priority=1)
+            self.model.ModelSense = GRB.MINIMIZE
         elif upper_bound:
             self.model.setParam("MIPFocus", 2)
-            self.model.setObjective(self.alpha.sum(), GRB.MAXIMIZE)
+            self.model.setObjectiveN(
+                expr=self.alpha.sum(), weight=-1, index=0, priority=1
+            )
+            self.model.ModelSense = GRB.MINIMIZE
 
     def add_sink_state_penalty(self, lambda_s, sink_state_index=1):
         """Add penalty for transitions not leading to the sink state."""
         sink_state = self.states[sink_state_index]
-        penalty = lambda_s * quicksum(
-            1 - self.transition[q, a, sink_state]
-            for q in self.states
-            for a, _ in enumerate(self.alphabet)
+        self.model.setObjectiveN(
+            expr=quicksum(
+                1 - self.transition[q, a, sink_state]
+                for q in self.states
+                for a, _ in enumerate(self.alphabet)
+            ),
+            index=1,
+            weight=lambda_s,
+            priority=0,
         )
-        self.model.setObjective(self.model.getObjective() + penalty, GRB.MINIMIZE)
 
     def add_self_loop_penalty(self, lambda_l):
         """Add penalty for transitions that are not self-loops."""
-        penalty = lambda_l * sum(
-            self.transition[q, a, q0]
-            for q in self.states
-            for a, _ in enumerate(self.alphabet)
-            for q0 in self.states
-            if q0 != q
+        self.model.setObjectiveN(
+            expr=quicksum(
+                self.transition[q, a, q0]
+                for q in self.states
+                for a, _ in enumerate(self.alphabet)
+                for q0 in self.states
+                if q0 != q
+            ),
+            index=2,
+            weight=lambda_l,
+            priority=0,
         )
-        self.model.setObjective(self.model.getObjective() + penalty, GRB.MINIMIZE)
 
     def add_parallel_edge_penalty(self, lambda_p):
         """Add penalty for multiple successor states."""
@@ -167,5 +191,9 @@ class Problem:
                 )
                 for a, _ in enumerate(self.alphabet):
                     self.model.addConstr(eq[q, q0] >= self.transition[q, a, q0])
-        penalty = lambda_p * sum(eq[q, q0] for q in self.states for q0 in self.states)
-        self.model.setObjective(self.model.getObjective() + penalty, GRB.MINIMIZE)
+        self.model.setObjectiveN(
+            expr=quicksum(eq[q, q0] for q in self.states for q0 in self.states),
+            index=3,
+            weight=lambda_p,
+            priority=0,
+        )

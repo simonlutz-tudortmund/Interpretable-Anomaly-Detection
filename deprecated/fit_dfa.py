@@ -3,7 +3,7 @@ from typing import List, Tuple
 from gurobipy import GRB, Model
 from src.distance_functions import calculate_distance_matrix
 from src.constraints import (
-    add_sample_constraints,
+    add_unlabeled_sample_constraints,
     add_accepted_constraints,
     add_gamma_constraints,
     add_betta_constraints,
@@ -46,7 +46,9 @@ def fit_minimal_dfa(
             model, states, alphabet, transitions, final_states, lambda_s, lambda_p
         )
 
-        add_sample_constraints(model, states, sample, alpha, lower_bound, upper_bound)
+        add_unlabeled_sample_constraints(
+            model, states, sample, alpha, lower_bound, upper_bound
+        )
         set_bounded_objective(
             model,
             states,
