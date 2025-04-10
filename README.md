@@ -15,7 +15,8 @@ This project implements an algorithm for learning a minimal Deterministic Finite
 To install the required dependencies for this project, run:
 
 ```
-pip install -r requirements.txt
+pip install poetry
+poetry install
 ```
 
 Make sure you have a Gurobi license, as the `gurobipy` library is the official Python interface to the Gurobi Optimizer.

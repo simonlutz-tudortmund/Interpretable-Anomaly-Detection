@@ -1,9 +1,8 @@
 import logging
 import sys
 from typing import Optional
-from gurobipy import Model, GRB, quicksum
-from numpy import positive
-
+from gurobipy import MVar, Model, GRB, gurobi, quicksum
+import numpy as np
 from src.milp.classification import GurobiClassification
 from src.utils.dfa import DFABuilder
 
@@ -33,7 +32,7 @@ class Problem:
         for p in range(self.N):
             for a, letter in enumerate(self.alphabet):
                 trans_q = [self.transition[p, a, q] for q in range(self.N)]
-                self.model.addConstr(quicksum(trans_q) == 1, f"trans_sum_{p}_{a}")
+                self.model.addLConstr(quicksum(trans_q) == 1, f"trans_sum_{p}_{a}")
 
         ########################################################################################################################
         #                                           Accepting state self loops:
@@ -44,7 +43,7 @@ class Problem:
 
         for q in self.states:
             for a, letter in enumerate(self.alphabet):
-                self.model.addConstr((self.terminal[q] <= self.transition[q, a, q]))
+                self.model.addLConstr((self.terminal[q] <= self.transition[q, a, q]))
 
         ########################################################################################################################
         #                                           Prefix tree for words:
@@ -90,8 +89,8 @@ class Problem:
 
     def add_labeled_sample_constraints(
         self,
-        positive_sample: list[list[str]],
-        negative_sample: list[list[str]],
+        positive_sample: list[tuple[str, ...]],
+        negative_sample: list[tuple[str, ...]],
     ):
         for idx, word in enumerate(positive_sample):
             self.classifier.generate_clauses_labeled(
@@ -101,33 +100,35 @@ class Problem:
             self.classifier.generate_clauses_labeled(
                 word=word, word_index=idx, positive=False
             )
+        self.model.setParam("MIPFocus", 1)
 
     def add_unlabeled_sample_constraints(
         self,
-        sample: list[list[str]],
+        sample: list[tuple[str, ...]],
+        sample_freq: np.array = None,
         lower_bound: Optional[int] = None,
         upper_bound: Optional[int] = None,
     ):
-        """Add constraints for prefix acceptance."""
-        self.alpha = self.model.addVars(
-            len(sample), self.N, vtype=GRB.BINARY, name="alpha"
+        self.alpha = self.model.addMVar(
+            shape=(len(sample), self.N), vtype=GRB.BINARY, name="alpha"
         )
         for idx, word in enumerate(sample):
             self.classifier.generate_clauses_unlabeled(
                 word=word, word_index=idx, alpha=self.alpha
             )
 
+        alpha_sum = sample_freq @ self.alpha @ np.ones(self.N)
         ########################################################################################################################
         #                                           Bound Constraints:
         ########################################################################################################################
         if lower_bound:
             self.model.addConstr(
-                self.alpha.sum() >= lower_bound,
+                alpha_sum >= lower_bound,
                 "lower_bound",
             )
         if upper_bound:
             self.model.addConstr(
-                self.alpha.sum() <= upper_bound,
+                alpha_sum <= upper_bound,
                 "upper_bound",
             )
 
@@ -139,13 +140,11 @@ class Problem:
             self.model.ModelSense = GRB.MINIMIZE
         elif lower_bound:
             self.model.setParam("MIPFocus", 2)
-            self.model.setObjectiveN(expr=self.alpha.sum(), index=0, priority=1)
+            self.model.setObjectiveN(expr=alpha_sum, index=0, priority=1)
             self.model.ModelSense = GRB.MINIMIZE
         elif upper_bound:
             self.model.setParam("MIPFocus", 2)
-            self.model.setObjectiveN(
-                expr=self.alpha.sum(), weight=-1, index=0, priority=1
-            )
+            self.model.setObjectiveN(expr=alpha_sum, weight=-1, index=0, priority=1)
             self.model.ModelSense = GRB.MINIMIZE
 
     def add_sink_state_penalty(self, lambda_s, sink_state_index=1):
@@ -183,14 +182,14 @@ class Problem:
         eq = self.model.addVars(self.N, self.N, vtype=GRB.BINARY, name="eq")
         for q in self.states:
             for q0 in self.states:
-                self.model.addConstr(
+                self.model.addLConstr(
                     eq[q, q0]
                     <= sum(
                         self.transition[q, a, q0] for a, _ in enumerate(self.alphabet)
                     )
                 )
                 for a, _ in enumerate(self.alphabet):
-                    self.model.addConstr(eq[q, q0] >= self.transition[q, a, q0])
+                    self.model.addLConstr(eq[q, q0] >= self.transition[q, a, q0])
         self.model.setObjectiveN(
             expr=quicksum(eq[q, q0] for q in self.states for q0 in self.states),
             index=3,

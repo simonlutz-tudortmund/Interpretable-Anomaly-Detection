@@ -6,6 +6,7 @@ from math import ceil, floor
 from typing import Optional
 
 from gurobipy import GRB
+import numpy as np
 
 from src.milp.problem import Problem
 
@@ -34,6 +35,19 @@ def learn_dfa_with_bounds(
     if upper_bound:
         upper_bound = int(upper_bound)
 
+    unique_samples = []
+    sample_counts = {}
+    """Add constraints for prefix acceptance."""
+    for word in sample:
+        # Convert the list to a tuple to make it hashable
+        word_tuple = tuple(word)
+        if word_tuple in sample_counts:
+            sample_counts[word_tuple] += 1
+        else:
+            sample_counts[word_tuple] = 1
+            unique_samples.append(word)
+    sample_freq = np.array([sample_counts[tuple(word)] for word in unique_samples])
+
     max_size = None
     for N in itertools.count(min_dfa_size):
         if max_size is not None and N > max_size:
@@ -41,7 +55,7 @@ def learn_dfa_with_bounds(
             # return None
 
         logging.warning(
-            f"\x1b[1m>>> trying to solve DFA with {N} states and bounds [{lower_bound}, {upper_bound}].\x1b[m"
+            f"\x1b[1;34m>>> trying to solve DFA with {N} states and bounds [{lower_bound}, {upper_bound}].\x1b[m"
         )
 
         problem = Problem(N, alphabet)
@@ -62,7 +76,10 @@ def learn_dfa_with_bounds(
 
         problem.add_automaton_constraints()
         problem.add_unlabeled_sample_constraints(
-            sample=sample, lower_bound=lower_bound, upper_bound=upper_bound
+            sample=unique_samples,
+            sample_freq=sample_freq,
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
         )
         if lambda_l:
             problem.add_self_loop_penalty(lambda_l=lambda_l)
@@ -104,8 +121,11 @@ def learn_dfa_with_labels(
             # return None
 
         logging.warning(
-            f"\x1b[1m>>> trying to solve DFA with {N} states and {len(positive_sample)} positive, {len(negative_sample)} negative samples.\x1b[m"
+            f"\x1b[1;34m>>> trying to solve DFA with {N} states and {len(positive_sample)} positive, {len(negative_sample)} negative samples.\x1b[m"
         )
+
+        positive_sample = list(set(positive_sample))
+        negative_sample = list(set(negative_sample))
 
         problem = Problem(N, alphabet)
         problem.model.setParam("Threads", 1)

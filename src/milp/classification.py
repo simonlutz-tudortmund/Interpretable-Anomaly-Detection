@@ -32,15 +32,15 @@ class GurobiClassification:
         """Create the root node (empty word) with initial state constraints."""
         reach_vars = [self.model.addVar(vtype=GRB.BINARY) for q in range(self.N)]
         # Exactly one state is active
-        self.model.addConstr(quicksum(reach_vars) == 1, "root_sum")
+        self.model.addLConstr(quicksum(reach_vars) == 1, "root_sum")
         # Initial state is 0
-        self.model.addConstr(reach_vars[0] == 1, "initial_state")
+        self.model.addLConstr(reach_vars[0] == 1, "initial_state")
         return ClassificationNode(reach_vars)
 
     def _create_new_node(self):
         """Create a new node with reachability variables and sum constraint."""
         reach_vars = [self.model.addVar(vtype=GRB.BINARY) for q in range(self.N)]
-        self.model.addConstr(quicksum(reach_vars) == 1)
+        self.model.addLConstr(quicksum(reach_vars) == 1)
         return ClassificationNode(reach_vars)
 
     def _add_transition_constraints(self, parent_reach, child_reach, a_idx):
@@ -104,7 +104,7 @@ class GurobiClassification:
         for q in range(self.N):
             if positive:
                 # Ensure the reached state is accepting for positive examples
-                self.model.addConstr(reach_vars[q] <= self.term_vars[q])
+                self.model.addLConstr(reach_vars[q] <= self.term_vars[q])
             else:
                 # Ensure the reached state is not accepting for negative examples
-                self.model.addConstr(reach_vars[q] <= 1 - self.term_vars[q])
+                self.model.addLConstr(reach_vars[q] <= 1 - self.term_vars[q])
