@@ -1,5 +1,5 @@
 import argparse
-from src.utility import (
+from deprecated.utility import (
     load_sample,
     evaluate_sample_with_dfa,
     calculate_metrics,
@@ -8,7 +8,7 @@ from src.utility import (
 )
 import logging
 from typing import List, Tuple, Optional, Set
-from src.fit_dfa_wrapers import fit_and_log_dfa
+from deprecated.fit_dfa_wrapers import fit_and_log_dfa
 
 
 def train_and_evaluate_dfa(

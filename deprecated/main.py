@@ -1,7 +1,7 @@
 import argparse
-from src.fit_dfa_wrapers import fit_dfa_from_file
+from deprecated.fit_dfa_wrapers import fit_dfa_from_file
 import logging
-from src.utility import add_common_args
+from deprecated.utility import add_common_args
 
 
 def cli():

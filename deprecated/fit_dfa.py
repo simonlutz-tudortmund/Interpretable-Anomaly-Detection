@@ -1,17 +1,20 @@
 import logging
 from typing import List, Tuple
 from gurobipy import GRB, Model
-from src.distance_functions import calculate_distance_matrix
-from src.constraints import (
+from deprecated.distance_functions import calculate_distance_matrix
+from deprecated.constraints import (
     add_unlabeled_sample_constraints,
     add_accepted_constraints,
     add_gamma_constraints,
     add_betta_constraints,
     add_interpretability_constrates,
 )
-from src.objective_functions import set_bounded_objective, add_distance_based_objective
-from src.utility import get_prefixes
-from src.setup_dfa import initialize_prefixes_and_bounds, set_dfa
+from deprecated.objective_functions import (
+    set_bounded_objective,
+    add_distance_based_objective,
+)
+from deprecated.utility import get_prefixes
+from deprecated.setup_dfa import initialize_prefixes_and_bounds, set_dfa
 
 
 def fit_minimal_dfa(

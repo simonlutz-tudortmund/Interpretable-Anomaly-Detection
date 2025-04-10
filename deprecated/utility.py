@@ -9,7 +9,7 @@ from sklearn.metrics import (
     f1_score,
     confusion_matrix,
 )
-from src.distance_functions import distance_function_names
+from deprecated.distance_functions import distance_function_names
 
 
 def calculate_metrics(true_labels, predicted_labels):

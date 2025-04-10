@@ -1,13 +1,13 @@
 from typing import List, Optional, Tuple
 from gurobipy import Model, GRB
-from src.constraints import (
+from deprecated.constraints import (
     add_transition_constraints,
     add_prefix_constraints,
     add_initial_state_constraint,
     add_transition_follow_constraints,
     add_alpha_constraints,
 )
-from src.utility import get_prefixes
+from deprecated.utility import get_prefixes
 
 
 def initialize_prefixes_and_bounds(

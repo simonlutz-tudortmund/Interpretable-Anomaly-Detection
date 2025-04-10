@@ -1,7 +1,7 @@
 from typing import Any, List, Optional, Tuple, Union
 from gurobipy import GRB, Model, Var, quicksum, tupledict
 import numpy as np
-from src.distance_functions import find_max_dist
+from deprecated.distance_functions import find_max_dist
 
 
 def add_sink_state_penalty(

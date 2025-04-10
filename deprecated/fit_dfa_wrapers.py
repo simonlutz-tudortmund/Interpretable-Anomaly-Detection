@@ -1,5 +1,5 @@
-from src.distance_functions import distance_function_names
-from src.utility import (
+from deprecated.distance_functions import distance_function_names
+from deprecated.utility import (
     load_sample,
     evaluate_sample_with_dfa,
     save_visualized_dfa,
@@ -8,7 +8,7 @@ from src.utility import (
 )
 import logging
 from typing import List, Tuple, Optional, Set
-from src.fit_dfa import fit_minimal_dfa, fit_distance_based_dfa
+from deprecated.fit_dfa import fit_minimal_dfa, fit_distance_based_dfa
 
 from math import floor, ceil
 
