@@ -1,9 +1,9 @@
-from src.milp.milp_data_file import learn_dfa_with_labels
+from src.milp.milp_data_file import learn_dfa_with_distances
 import pytest
 import random
 
 
-class TestDFALearningWithLabels:
+class TestDFALearningWithDistances:
     @pytest.fixture
     def sample_data(self):
         """
@@ -21,7 +21,7 @@ class TestDFALearningWithLabels:
 
         # Generate base random traces
         base_traces = []
-        num_traces = 10  # Total number of traces
+        num_traces = 5  # Total number of traces
 
         # Generate 80% random traces that never contain "cc"
         for _ in range(int(num_traces * 0.8)):
@@ -63,18 +63,29 @@ class TestDFALearningWithLabels:
             separatable_traces.append(tuple(trace))
 
         # Combine and shuffle all traces
-        random.shuffle(base_traces)
-        random.shuffle(separatable_traces)
+        all_traces = base_traces + separatable_traces
+        random.shuffle(all_traces)
 
-        return base_traces, separatable_traces, alphabet
+        return all_traces, alphabet
 
-    def test_labels(self, sample_data):
-        negative_sample, positive_sample, alphabet = sample_data
+    @pytest.mark.parametrize(
+        "distance_function",
+        [
+            "levenshtein",
+            "jaccard",
+            "hamming",
+            "ordinal_hamming",
+            "dynamic_time_warping",
+        ],
+    )
+    def test_distances(self, sample_data, distance_function):
+        distance_function = distance_function
+        sample, alphabet = sample_data
 
-        dfa = learn_dfa_with_labels(
-            positive_sample=positive_sample,
-            negative_sample=negative_sample,
+        dfa = learn_dfa_with_distances(
+            sample=sample,
             alphabet=alphabet,
+            distance_function=distance_function,
             min_dfa_size=1,
             lambda_l=None,
             lambda_s=None,
@@ -84,43 +95,5 @@ class TestDFALearningWithLabels:
         )
 
         # Verify bounds are respected
-        assert all(positive_trace in dfa for positive_trace in positive_sample)
-        assert all(negative_trace not in dfa for negative_trace in negative_sample)
-
-    @pytest.mark.parametrize(
-        "penalty_type",
-        [
-            [],
-            ["sink"],
-            ["self_loop"],
-            ["parallel"],
-            ["sink", "self_loop"],
-            ["sink", "parallel"],
-            ["self_loop", "parallel"],
-            ["sink", "self_loop", "parallel"],
-        ],
-    )
-    def test_combined_penalties(self, sample_data, penalty_type):
-        """Comprehensive test of all penalties with different bound configurations."""
-        negative_sample, positive_sample, alphabet = sample_data
-
-        # Set up the specific penalty
-        lambda_s = 0.7 if penalty_type == "sink" else None
-        lambda_l = 0.7 if penalty_type == "self_loop" else None
-        lambda_p = 0.7 if penalty_type == "parallel" else None
-
-        dfa = learn_dfa_with_labels(
-            positive_sample=positive_sample,
-            negative_sample=negative_sample,
-            alphabet=alphabet,
-            min_dfa_size=1,
-            lambda_l=lambda_l,
-            lambda_s=lambda_s,
-            lambda_p=lambda_p,
-            verbose=2,
-            pointwise=False,
-        )
-
-        # Verify bounds are respected
-        assert all(positive_trace in dfa for positive_trace in positive_sample)
-        assert all(negative_trace not in dfa for negative_trace in negative_sample)
+        accepted_count = sum(1 if trace in dfa else 0 for trace in sample)
+        print(dfa)

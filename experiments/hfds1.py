@@ -42,7 +42,7 @@ df["Features"] = df["Features"].apply(convert_to_tuple)
 df_pruned = df[df["Features"].apply(len) <= 30]
 
 lower_bound = 0.027
-upper_bound = 0.028
+upper_bound = None
 sample = df_pruned["Features"].values.tolist()
 alphabet = frozenset(value for trace in sample for value in trace)
 positive_sample = df_pruned[df_pruned["Label"] == "Fail"]["Features"].values.tolist()

@@ -1,7 +1,7 @@
 import logging
 import sys
 from typing import Optional
-from gurobipy import MVar, Model, GRB, gurobi, quicksum
+from gurobipy import Model, GRB, quicksum
 import numpy as np
 from src.milp.classification import GurobiClassification
 from src.utils.dfa import DFABuilder
@@ -27,8 +27,14 @@ class Problem:
         #                                           Unique transitions:
         ########################################################################################################################
         self.transition = self.model.addVars(
-            self.N, len(self.alphabet), self.N, vtype=GRB.BINARY, name="delta"
+            self.N,
+            len(self.alphabet),
+            self.N,
+            vtype=GRB.BINARY,
+            name="delta",
         )
+        # for var in self.transition.values():
+        #     var.BranchPriority = 1
         for p in range(self.N):
             for a, letter in enumerate(self.alphabet):
                 trans_q = [self.transition[p, a, q] for q in range(self.N)]
@@ -37,9 +43,10 @@ class Problem:
         ########################################################################################################################
         #                                           Accepting state self loops:
         ########################################################################################################################
-        self.terminal = [
-            self.model.addVar(vtype=GRB.BINARY, name=f"term_{q}") for q in range(self.N)
-        ]
+        self.terminal = self.model.addVars(self.N, vtype=GRB.BINARY)
+
+        # for var in self.terminal.values():
+        #     var.BranchPriority = 2
 
         for q in self.states:
             for a, letter in enumerate(self.alphabet):
@@ -146,6 +153,118 @@ class Problem:
             self.model.setParam("MIPFocus", 2)
             self.model.setObjectiveN(expr=alpha_sum, weight=-1, index=0, priority=1)
             self.model.ModelSense = GRB.MINIMIZE
+
+    def add_distance_sample_constraints(
+        self,
+        sample: list[tuple[str, ...]],
+        sample_pair_freq_matrix: np.ndarray,
+        distance_matrix: np.ndarray,
+    ):
+        S = len(sample)
+        self.alpha = self.model.addMVar(
+            shape=(S, self.N), vtype=GRB.BINARY, name="alpha"
+        )
+        for idx, word in enumerate(sample):
+            self.classifier.generate_clauses_unlabeled(
+                word=word, word_index=idx, alpha=self.alpha
+            )
+        # self.acceptance_vector = self.model.addMVar(
+        #     shape=(S, 1), vtype=GRB.BINARY, name="gamma"
+        # )
+        # self.rejected_vector = self.model.addMVar(
+        #     shape=(S, 1), vtype=GRB.BINARY, name="beta"
+        # )
+        # self.model.addConstrs(
+        #     (
+        #         self.acceptance_vector[i, j] == self.alpha[i, :] @ np.ones(self.N)
+        #         for i in range(S)
+        #         for j in range(self.N)
+        #     ),
+        #     name="gamma",
+        # )
+        # self.model.addConstrs(
+        #     (
+        #         self.rejected_vector[i, j] == 1 - self.alpha[i, :] @ np.ones(self.N)
+        #         for i in range(S)
+        #         for j in range(self.N)
+        #     ),
+        #     name="beta",
+        # )
+
+        # self.cross_class_mask = self.model.addMVar(
+        #     shape=(S, 1), vtype=GRB.BINARY, name="gamma"
+        # )
+        # cross_distance_sum = (
+        #     self.cross_class_mask * distance_matrix * sample_pair_freq_matrix
+        # ).sum()
+
+        # self.normal_class_mark = self.rejected_vector @ self.rejected_vector.transpose()
+        # normal_distance_sum = (
+        #     self.normal_class_mark * distance_matrix * sample_pair_freq_matrix
+        # ).sum()
+
+        # self.model.setObjective(
+        #     expr=cross_distance_sum - normal_distance_sum, sense=GRB.MAXIMIZE
+        # )
+        # self.model.setParam("MIPFocus", 2)
+
+        self.acceptance_vector = self.model.addMVar(
+            shape=(S,), vtype=GRB.BINARY, name="gamma"
+        )
+        self.rejected_vector = self.model.addMVar(
+            shape=(S,), vtype=GRB.BINARY, name="beta"
+        )
+        self.model.addConstr(
+            (self.acceptance_vector == self.alpha @ np.ones(self.N)),
+            name="gamma",
+        )
+        self.model.addConstr(
+            (self.acceptance_vector == 1 - self.alpha @ np.ones(self.N)),
+            name="beta",
+        )
+
+        self.cross_class_mask = self.model.addMVar(
+            shape=(S, S), vtype=GRB.BINARY, name="cross_class_mask"
+        )
+        for i in range(S):
+            for j in range(S):
+                self.model.addConstr(
+                    self.cross_class_mask[i, j] <= self.acceptance_vector[i]
+                )
+                self.model.addConstr(
+                    self.cross_class_mask[i, j] <= self.rejected_vector[j]
+                )
+                self.model.addConstr(
+                    self.cross_class_mask[i, j]
+                    >= self.acceptance_vector[i] + self.rejected_vector[j] - 1
+                )
+        cross_distance_sum = (
+            self.cross_class_mask * distance_matrix * sample_pair_freq_matrix
+        ).sum()
+
+        self.normal_class_mark = self.model.addMVar(
+            shape=(S, S), vtype=GRB.BINARY, name="normal_class_mask"
+        )
+        for i in range(S):
+            for j in range(S):
+                self.model.addConstr(
+                    self.normal_class_mark[i, j] <= self.rejected_vector[i]
+                )
+                self.model.addConstr(
+                    self.normal_class_mark[i, j] <= self.rejected_vector[j]
+                )
+                self.model.addConstr(
+                    self.normal_class_mark[i, j]
+                    >= self.rejected_vector[i] + self.rejected_vector[j] - 1
+                )
+        normal_distance_sum = (
+            self.normal_class_mark * distance_matrix * sample_pair_freq_matrix
+        ).sum()
+
+        self.model.setObjective(
+            expr=cross_distance_sum - normal_distance_sum, sense=GRB.MAXIMIZE
+        )
+        self.model.setParam("MIPFocus", 2)
 
     def add_sink_state_penalty(self, lambda_s, sink_state_index=1):
         """Add penalty for transitions not leading to the sink state."""
