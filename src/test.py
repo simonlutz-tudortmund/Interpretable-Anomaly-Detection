@@ -38,12 +38,11 @@ df["Features"] = df["Features"].apply(convert_to_tuple)
 
 # 75% of data
 # df_pruned = df[~df["Features"].duplicated() & (df["Features"].apply(len) <= 20)]
-df_pruned = df[df["Features"].apply(len) <= 30]
+df_pruned = df[df["Features"].apply(len) <= 60]
 
-df_unique = df_pruned[~df_pruned["Features"].duplicated()]
-lower_bound = 0.2
-upper_bound = 0.21
-sample = df_unique["Features"].values.tolist()
+lower_bound = 0.029
+upper_bound = None
+sample = df_pruned["Features"].values.tolist()
 alphabet = frozenset(value for trace in sample for value in trace)
 
 dfa = learn_dfa_with_bounds(
@@ -117,3 +116,18 @@ def save_visualized_dfa(dfa: CausalDFA, output_path="dfa"):
 
 
 save_visualized_dfa(dfa)
+
+# 115
+# Precision: 0.6369647355163728
+# Recall: 0.48069383390756804
+# F1 Score: 0.5479043943394949
+
+# Classification Report:
+#               precision    recall  f1-score   support
+
+#         Fail       0.98      0.99      0.99    558183
+#      Success       0.64      0.48      0.55     16834
+
+#     accuracy                           0.98    575017
+#    macro avg       0.81      0.74      0.77    575017
+# weighted avg       0.97      0.98      0.98    575017
