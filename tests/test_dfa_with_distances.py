@@ -86,7 +86,7 @@ class TestDFALearningWithDistances:
             sample=sample,
             alphabet=alphabet,
             distance_function=distance_function,
-            min_dfa_size=1,
+            dfa_size=3,
             lambda_l=None,
             lambda_s=None,
             lambda_p=None,

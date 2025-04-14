@@ -182,12 +182,12 @@ def learn_dfa_with_distances(
     lambda_s: Optional[float],
     lambda_l: Optional[float],
     lambda_p: Optional[float],
-    min_dfa_size: int,
+    dfa_size: int,
     verbose=0,
     pointwise=False,
 ):
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
-
+    N = dfa_size
     unique_samples = []
     sample_counts = {}
     """Add constraints for prefix acceptance."""
@@ -204,59 +204,53 @@ def learn_dfa_with_distances(
     ).reshape(-1, 1)
     sample_pair_freq = sample_freq @ sample_freq.T
 
-    max_size = None
     distance_function_callable = distance_function_names[distance_function]
     distance_matrix = calculate_distance_matrix(
         sample=unique_samples, distance_func=distance_function_callable
     )
-    for N in itertools.count(min_dfa_size):
-        if max_size is not None and N > max_size:
-            raise RuntimeError("DFA with at most {} states not found".format(max_size))
-            # return None
+    logging.warning(
+        f"\x1b[1;34m>>> trying to solve DFA with {N} states and {distance_function} distance function.\x1b[m"
+    )
 
-        logging.warning(
-            f"\x1b[1;34m>>> trying to solve DFA with {N} states and {distance_function} distance function.\x1b[m"
+    problem = Problem(N, alphabet)
+    problem.model.setParam("Threads", 1)
+
+    # Aggressive presolve + relaxation heuristic
+    problem.model.setParam("Presolve", 2)
+    # if len(sample) > 1000:
+    #     problem.model.setParam("NoRelHeurTime", 1800)
+    # problem.model.setParam("Cuts", 0)
+
+    # Avoid Simplex altogether
+    # problem.model.setParam("Method", 2)
+    # problem.model.setParam("Crossover", 0)
+    # problem.model.setParam("NodeMethod", 2)
+
+    problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
+
+    problem.add_automaton_constraints()
+    problem.add_distance_sample_constraints_linear(
+        sample=unique_samples,
+        sample_pair_freq_matrix=sample_pair_freq,
+        distance_matrix=distance_matrix,
+    )
+    if lambda_l:
+        problem.add_self_loop_penalty(lambda_l=lambda_l)
+    if lambda_p:
+        problem.add_parallel_edge_penalty(lambda_p=lambda_p)
+    if lambda_s:
+        problem.add_sink_state_penalty(lambda_s=lambda_s)
+
+    problem.model.update()
+    logging.warning(
+        "\x1b[1;34m... translated to {} constraints of {} vars.\x1b[m".format(
+            problem.model.NumVars, problem.model.NumConstrs
         )
+    )
 
-        problem = Problem(N, alphabet)
-        problem.model.setParam("Threads", 1)
-
-        # Aggressive presolve + relaxation heuristic
-        # problem.model.setParam("Presolve", 2)
-        # if len(sample) > 1000:
-        #     problem.model.setParam("NoRelHeurTime", 1800)
-        # problem.model.setParam("Cuts", 0)
-
-        # Avoid Simplex altogether
-        # problem.model.setParam("Method", 2)
-        # problem.model.setParam("Crossover", 0)
-        # problem.model.setParam("NodeMethod", 2)
-
-        problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
-
-        problem.add_automaton_constraints()
-        problem.add_distance_sample_constraints(
-            sample=unique_samples,
-            sample_pair_freq_matrix=sample_pair_freq,
-            distance_matrix=distance_matrix,
-        )
-        if lambda_l:
-            problem.add_self_loop_penalty(lambda_l=lambda_l)
-        if lambda_p:
-            problem.add_parallel_edge_penalty(lambda_p=lambda_p)
-        if lambda_s:
-            problem.add_sink_state_penalty(lambda_s=lambda_s)
-
-        problem.model.update()
-        logging.warning(
-            "\x1b[1;34m... translated to {} constraints of {} vars.\x1b[m".format(
-                problem.model.NumVars, problem.model.NumConstrs
-            )
-        )
-
-        problem.model.optimize()
-        if problem.model.status == GRB.OPTIMAL:
-            logging.warning("\x1b[1;34m... optimal.\x1b[m")
-            dfa = problem.get_automaton()
-            return dfa
-    raise RuntimeError("DFA with at most {} states not found".format(max_size))
+    problem.model.optimize()
+    if problem.model.status == GRB.OPTIMAL:
+        logging.warning("\x1b[1;34m... optimal.\x1b[m")
+        dfa = problem.get_automaton()
+        return dfa
+    raise RuntimeError("DFA with {} states not found".format(N))

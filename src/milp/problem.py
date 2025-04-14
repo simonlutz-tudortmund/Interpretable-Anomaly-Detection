@@ -154,6 +154,64 @@ class Problem:
             self.model.setObjectiveN(expr=alpha_sum, weight=-1, index=0, priority=1)
             self.model.ModelSense = GRB.MINIMIZE
 
+    def add_distance_sample_constraints_linear(
+        self,
+        sample: list[tuple[str, ...]],
+        sample_pair_freq_matrix: np.ndarray,
+        distance_matrix: np.ndarray,
+    ):
+        S = len(sample)
+        self.alpha = self.model.addMVar(
+            shape=(S, self.N), vtype=GRB.BINARY, name="alpha"
+        )
+        for idx, word in enumerate(sample):
+            self.classifier.generate_clauses_unlabeled(
+                word=word, word_index=idx, alpha=self.alpha
+            )
+        self.acceptance_vector = self.alpha @ np.ones(self.N)
+
+        self.phi = self.model.addMVar(shape=(S, S), vtype=GRB.INTEGER, name="phi")
+        self.z = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="z")
+
+        # Add constraints for all pairs (i, j)
+        for i in range(S):
+            for j in range(S):
+                if i == j:
+                    # Diagonal: enforce self.phi[i,i] = 0
+                    self.model.addConstr(self.phi[i, i] == 0, name=f"phi_diag_{i}")
+                    # For diagonal, set self.z[i,i] = alpha[i]
+                    self.model.addConstr(
+                        self.z[i, i] == self.acceptance_vector[i], name=f"z_diag_{i}"
+                    )
+                else:
+                    # Linearize the product self.z[i,j] = alpha[i] * alpha[j]
+                    self.model.addConstr(
+                        self.z[i, j] <= self.acceptance_vector[i],
+                        name=f"z_le_alpha_{i}_{j}",
+                    )
+                    self.model.addConstr(
+                        self.z[i, j] <= self.acceptance_vector[j],
+                        name=f"z_le_alpha_{j}_{i}",
+                    )
+                    self.model.addConstr(
+                        self.z[i, j]
+                        >= self.acceptance_vector[i] + self.acceptance_vector[j] - 1,
+                        name=f"z_ge_sum_{i}_{j}",
+                    )
+                    # Define phi_{ij} = -1 + 2*(alpha[i] + alpha[j]) - 3*self.z[i,j]
+                    self.model.addConstr(
+                        self.phi[i, j]
+                        == -1
+                        + 2 * (self.acceptance_vector[i] + self.acceptance_vector[j])
+                        - 3 * self.z[i, j],
+                        name=f"phi_def_{i}_{j}",
+                    )
+
+        distance_sum = (self.phi * distance_matrix * sample_pair_freq_matrix).sum()
+
+        self.model.setObjective(expr=distance_sum, sense=GRB.MAXIMIZE)
+        self.model.setParam("MIPFocus", 2)
+
     def add_distance_sample_constraints(
         self,
         sample: list[tuple[str, ...]],
@@ -168,46 +226,6 @@ class Problem:
             self.classifier.generate_clauses_unlabeled(
                 word=word, word_index=idx, alpha=self.alpha
             )
-        # self.acceptance_vector = self.model.addMVar(
-        #     shape=(S, 1), vtype=GRB.BINARY, name="gamma"
-        # )
-        # self.rejected_vector = self.model.addMVar(
-        #     shape=(S, 1), vtype=GRB.BINARY, name="beta"
-        # )
-        # self.model.addConstrs(
-        #     (
-        #         self.acceptance_vector[i, j] == self.alpha[i, :] @ np.ones(self.N)
-        #         for i in range(S)
-        #         for j in range(self.N)
-        #     ),
-        #     name="gamma",
-        # )
-        # self.model.addConstrs(
-        #     (
-        #         self.rejected_vector[i, j] == 1 - self.alpha[i, :] @ np.ones(self.N)
-        #         for i in range(S)
-        #         for j in range(self.N)
-        #     ),
-        #     name="beta",
-        # )
-
-        # self.cross_class_mask = self.model.addMVar(
-        #     shape=(S, 1), vtype=GRB.BINARY, name="gamma"
-        # )
-        # cross_distance_sum = (
-        #     self.cross_class_mask * distance_matrix * sample_pair_freq_matrix
-        # ).sum()
-
-        # self.normal_class_mark = self.rejected_vector @ self.rejected_vector.transpose()
-        # normal_distance_sum = (
-        #     self.normal_class_mark * distance_matrix * sample_pair_freq_matrix
-        # ).sum()
-
-        # self.model.setObjective(
-        #     expr=cross_distance_sum - normal_distance_sum, sense=GRB.MAXIMIZE
-        # )
-        # self.model.setParam("MIPFocus", 2)
-
         self.acceptance_vector = self.model.addMVar(
             shape=(S,), vtype=GRB.BINARY, name="gamma"
         )
@@ -219,44 +237,21 @@ class Problem:
             name="gamma",
         )
         self.model.addConstr(
-            (self.acceptance_vector == 1 - self.alpha @ np.ones(self.N)),
+            (self.rejected_vector == 1 - self.alpha @ np.ones(self.N)),
             name="beta",
         )
-
-        self.cross_class_mask = self.model.addMVar(
-            shape=(S, S), vtype=GRB.BINARY, name="cross_class_mask"
+        self.cross_class_mask = (
+            self.acceptance_vector.reshape(-1, 1)
+            @ self.rejected_vector.reshape(-1, 1).transpose()
         )
-        for i in range(S):
-            for j in range(S):
-                self.model.addConstr(
-                    self.cross_class_mask[i, j] <= self.acceptance_vector[i]
-                )
-                self.model.addConstr(
-                    self.cross_class_mask[i, j] <= self.rejected_vector[j]
-                )
-                self.model.addConstr(
-                    self.cross_class_mask[i, j]
-                    >= self.acceptance_vector[i] + self.rejected_vector[j] - 1
-                )
         cross_distance_sum = (
             self.cross_class_mask * distance_matrix * sample_pair_freq_matrix
         ).sum()
 
-        self.normal_class_mark = self.model.addMVar(
-            shape=(S, S), vtype=GRB.BINARY, name="normal_class_mask"
+        self.normal_class_mark = (
+            self.rejected_vector.reshape(-1, 1)
+            @ self.rejected_vector.reshape(-1, 1).transpose()
         )
-        for i in range(S):
-            for j in range(S):
-                self.model.addConstr(
-                    self.normal_class_mark[i, j] <= self.rejected_vector[i]
-                )
-                self.model.addConstr(
-                    self.normal_class_mark[i, j] <= self.rejected_vector[j]
-                )
-                self.model.addConstr(
-                    self.normal_class_mark[i, j]
-                    >= self.rejected_vector[i] + self.rejected_vector[j] - 1
-                )
         normal_distance_sum = (
             self.normal_class_mark * distance_matrix * sample_pair_freq_matrix
         ).sum()
