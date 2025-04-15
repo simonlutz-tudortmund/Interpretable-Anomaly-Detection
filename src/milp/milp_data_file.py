@@ -26,7 +26,6 @@ def learn_dfa_with_bounds(
     lambda_p: Optional[float],
     min_dfa_size: int,
     verbose=0,
-    pointwise=False,
 ):
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
 
@@ -117,7 +116,6 @@ def learn_dfa_with_labels(
     lambda_p: Optional[float],
     min_dfa_size: int,
     verbose=0,
-    pointwise=False,
 ):
     max_size = None
     for N in itertools.count(min_dfa_size):
@@ -184,7 +182,6 @@ def learn_dfa_with_distances(
     lambda_p: Optional[float],
     dfa_size: int,
     verbose=0,
-    pointwise=False,
 ):
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
     N = dfa_size
@@ -219,17 +216,17 @@ def learn_dfa_with_distances(
     problem.model.setParam("Presolve", 2)
     # if len(sample) > 1000:
     #     problem.model.setParam("NoRelHeurTime", 1800)
-    # problem.model.setParam("Cuts", 0)
+    problem.model.setParam("Cuts", 0)
 
     # Avoid Simplex altogether
-    # problem.model.setParam("Method", 2)
-    # problem.model.setParam("Crossover", 0)
-    # problem.model.setParam("NodeMethod", 2)
+    problem.model.setParam("Method", 2)
+    problem.model.setParam("Crossover", 0)
+    problem.model.setParam("NodeMethod", 2)
 
     problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
 
     problem.add_automaton_constraints()
-    problem.add_distance_sample_constraints_linear(
+    problem.add_distance_sample_constraints(
         sample=unique_samples,
         sample_pair_freq_matrix=sample_pair_freq,
         distance_matrix=distance_matrix,

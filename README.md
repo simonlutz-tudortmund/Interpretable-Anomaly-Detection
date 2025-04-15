@@ -32,7 +32,7 @@ alphabet = {"a", "b", "c"}
 lower_bound = 2
 upper_bound = None
 
-dfa = learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=2)
+dfa = learn_dfa_with_bounds(sample, alphabet, lower_bound, upper_bound, min_dfa_size=2)
 
 if dfa:
     print("Minimal DFA found:")
@@ -47,8 +47,9 @@ else:
 
 ### Main Functions
 
-- `learn_minimal_dfa(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1)`: Learns the minimal DFA from the given sample and alphabet within the provided bounds.
-- `evaluate_sample_with_dfa(sample, dfa)`: Evaluates the sample words using the learned DFA and returns the accepted and rejected words.
+- `learn_dfa_with_bounds(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1)`: Learns the minimal DFA from the given sample and alphabet within the provided bounds.
+- `learn_dfa_with_labels(positive_sample, negative_sample, alphabet, min_dfa_size=1)`: Learns the minimal DFA that accepts all words from positive_sample and rejects all negative_sample.
+- `learn_dfa_with_distances(sample, alphabet, distance_function, dfa_size=1)`: Learns a DFA from that maximizes distance between accepted and rejected words, while minimizing distance between rejected words.
 
 ### Constraints
 

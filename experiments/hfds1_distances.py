@@ -39,7 +39,6 @@ dfa_unlabeled = learn_dfa_with_distances(
     lambda_s=None,
     lambda_p=None,
     verbose=2,
-    pointwise=False,
 )
 df_pruned["Prediction"] = (
     df_pruned["Features"].apply(lambda feature: feature in dfa_unlabeled).astype(int)

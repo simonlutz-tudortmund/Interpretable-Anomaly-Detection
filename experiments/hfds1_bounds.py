@@ -57,8 +57,7 @@ negative_sample = df_pruned[df_pruned["Label"] == "Success"]["Features"].values.
 #     lambda_s=None,
 #     lambda_p=None,
 #     verbose=2,
-#     pointwise=False,
-# )
+# # )
 
 dfa_unlabeled = learn_dfa_with_bounds(
     alphabet=alphabet,
@@ -70,7 +69,6 @@ dfa_unlabeled = learn_dfa_with_bounds(
     lambda_s=None,
     lambda_p=None,
     verbose=2,
-    pointwise=False,
 )
 df_pruned["Prediction"] = (
     df_pruned["Features"].apply(lambda feature: feature in dfa_unlabeled).astype(int)

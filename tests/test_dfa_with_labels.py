@@ -80,7 +80,6 @@ class TestDFALearningWithLabels:
             lambda_s=None,
             lambda_p=None,
             verbose=2,
-            pointwise=False,
         )
 
         # Verify bounds are respected
@@ -118,7 +117,6 @@ class TestDFALearningWithLabels:
             lambda_s=lambda_s,
             lambda_p=lambda_p,
             verbose=2,
-            pointwise=False,
         )
 
         # Verify bounds are respected

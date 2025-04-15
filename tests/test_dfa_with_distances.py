@@ -91,7 +91,6 @@ class TestDFALearningWithDistances:
             lambda_s=None,
             lambda_p=None,
             verbose=2,
-            pointwise=False,
         )
 
         # Verify bounds are respected

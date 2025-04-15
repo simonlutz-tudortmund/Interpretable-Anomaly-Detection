@@ -55,7 +55,6 @@ dfa = learn_dfa_with_bounds(
     lambda_s=None,
     lambda_p=None,
     verbose=2,
-    pointwise=False,
 )
 df_pruned["Prediction"] = (
     df_pruned["Features"].apply(lambda feature: feature in dfa).astype(int)
