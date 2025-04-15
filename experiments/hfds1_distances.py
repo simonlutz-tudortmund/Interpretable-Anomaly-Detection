@@ -1,4 +1,3 @@
-from math import ceil, floor
 import pandas as pd
 import re
 
@@ -35,7 +34,7 @@ dfa_unlabeled = learn_dfa_with_distances(
     alphabet=alphabet,
     sample=sample,
     distance_function="levenshtein",
-    dfa_size=3,
+    dfa_size=4,
     lambda_l=None,
     lambda_s=None,
     lambda_p=None,
@@ -101,3 +100,19 @@ def save_visualized_dfa(dfa: CausalDFA, output_path="dfa"):
 
 
 save_visualized_dfa(dfa_unlabeled)
+
+"""
+Precision: 0.06638643488173268
+Recall: 0.7340475815345833
+F1 Score: 0.1217609471167039
+
+Classification Report:
+              precision    recall  f1-score   support
+
+        Fail       0.96      0.36      0.52    101890
+     Success       0.07      0.73      0.12      6347
+
+    accuracy                           0.38    108237
+   macro avg       0.51      0.55      0.32    108237
+weighted avg       0.90      0.38      0.50    108237
+"""
