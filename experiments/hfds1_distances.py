@@ -1,7 +1,7 @@
 import pandas as pd
 import re
 
-from src.milp.milp_data_file import learn_dfa_with_distances
+from src.milp.milp_data_file import learn_dfa_with_distances_quadratic
 from sklearn.metrics import (
     classification_report,
     precision_score,
@@ -30,7 +30,7 @@ sample = df_pruned["Features"].values.tolist()
 alphabet = frozenset(value for trace in sample for value in trace)
 
 
-dfa_unlabeled = learn_dfa_with_distances(
+dfa_unlabeled = learn_dfa_with_distances_quadratic(
     alphabet=alphabet,
     sample=sample,
     distance_function="levenshtein",
