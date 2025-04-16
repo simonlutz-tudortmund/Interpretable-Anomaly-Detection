@@ -169,12 +169,12 @@ class Problem:
         acceptance_vector = alpha @ np.ones(self.N)
 
         # Create auxiliary variables: matrices of size n x n.
-        # z1[i,j] will indicate (alpha[i]==0 and alpha[j]==0).
-        # z2[i,j] will indicate (alpha[i]==1 and alpha[j]==1).
-        z1 = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="z1")
-        z2 = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="z2")
+        # gamma[i,j] will indicate (alpha[i]==0 and alpha[j]==0).
+        # beta[i,j] will indicate (alpha[i]==1 and alpha[j]==1).
+        gamma = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="gamma")
+        beta = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="beta")
 
-        # Define phi (n x n) as the variable that will be related to z1 and z2.
+        # Define phi (n x n) as the variable that will be related to gamma and beta.
         phi = self.model.addMVar(shape=(S, S), lb=-GRB.INFINITY, name="phi")
 
         # ----- Diagonal constraint -----
@@ -187,34 +187,38 @@ class Problem:
         # Using broadcasting, alpha[:, None] is an (n x 1) column vector
         # and alpha[None, :] is an (1 x n) row vector.
         #
-        # For z1: (which indicates when both alphas are 0)
-        #   z1[i,j] ≤ 1 − alpha[i]
-        #   z1[i,j] ≤ 1 − alpha[j]
-        #   z1[i,j] ≥ 1 − alpha[i] − alpha[j]
-        self.model.addConstr(z1 <= 1 - acceptance_vector[:, None], name="z1_upper1")
-        self.model.addConstr(z1 <= 1 - acceptance_vector[None, :], name="z1_upper2")
+        # For gamma: (which indicates when both alphas are 0)
+        #   gamma[i,j] ≤ 1 − alpha[i]
+        #   gamma[i,j] ≤ 1 − alpha[j]
+        #   gamma[i,j] ≥ 1 − alpha[i] − alpha[j]
         self.model.addConstr(
-            z1 >= 1 - acceptance_vector[:, None] - acceptance_vector[None, :],
-            name="z1_lower",
+            gamma <= 1 - acceptance_vector[:, None], name="gamma_upper1"
+        )
+        self.model.addConstr(
+            gamma <= 1 - acceptance_vector[None, :], name="gamma_upper2"
+        )
+        self.model.addConstr(
+            gamma >= 1 - acceptance_vector[:, None] - acceptance_vector[None, :],
+            name="gamma_lower",
         )
 
-        # For z2: (which indicates when both alphas are 1)
-        #   z2[i,j] ≤ alpha[i]
-        #   z2[i,j] ≤ alpha[j]
-        #   z2[i,j] ≥ alpha[i] + alpha[j] − 1
-        self.model.addConstr(z2 <= acceptance_vector[:, None], name="z2_upper1")
-        self.model.addConstr(z2 <= acceptance_vector[None, :], name="z2_upper2")
+        # For beta: (which indicates when both alphas are 1)
+        #   beta[i,j] ≤ alpha[i]
+        #   beta[i,j] ≤ alpha[j]
+        #   beta[i,j] ≥ alpha[i] + alpha[j] − 1
+        self.model.addConstr(beta <= acceptance_vector[:, None], name="beta_upper1")
+        self.model.addConstr(beta <= acceptance_vector[None, :], name="beta_upper2")
         self.model.addConstr(
-            z2 >= acceptance_vector[:, None] + acceptance_vector[None, :] - 1,
-            name="z2_lower",
+            beta >= acceptance_vector[:, None] + acceptance_vector[None, :] - 1,
+            name="beta_lower",
         )
 
-        # ----- Relate phi to z1 and z2 -----
+        # ----- Relate phi to gamma and beta -----
         # The constraint for phi is defined as:
-        #   phi[i,j] = 1 − 2*z1[i,j] − z2[i,j]
+        #   phi[i,j] = 1 − 2*gamma[i,j] − beta[i,j]
         non_diag_mask = ~np.eye(phi.shape[0], dtype=bool)
         self.model.addConstr(
-            phi[non_diag_mask] == 1 - 2 * z1[non_diag_mask] - z2[non_diag_mask],
+            phi[non_diag_mask] == 1 - 2 * gamma[non_diag_mask] - beta[non_diag_mask],
             name="phi_def",
         )
 
