@@ -116,15 +116,15 @@ class Problem:
         lower_bound: Optional[int] = None,
         upper_bound: Optional[int] = None,
     ):
-        self.alpha = self.model.addMVar(
+        alpha = self.model.addMVar(
             shape=(len(sample), self.N), vtype=GRB.BINARY, name="alpha"
         )
         for idx, word in enumerate(sample):
             self.classifier.generate_clauses_unlabeled(
-                word=word, word_index=idx, alpha=self.alpha
+                word=word, word_index=idx, alpha=alpha
             )
 
-        alpha_sum = sample_freq @ self.alpha @ np.ones(self.N)
+        alpha_sum = sample_freq @ alpha @ np.ones(self.N)
         ########################################################################################################################
         #                                           Bound Constraints:
         ########################################################################################################################
@@ -161,18 +161,12 @@ class Problem:
         distance_matrix: np.ndarray,
     ):
         S = len(sample)
-        self.alpha = self.model.addMVar(
-            shape=(S, self.N), vtype=GRB.BINARY, name="alpha"
-        )
+        alpha = self.model.addMVar(shape=(S, self.N), vtype=GRB.BINARY, name="alpha")
         for idx, word in enumerate(sample):
             self.classifier.generate_clauses_unlabeled(
-                word=word, word_index=idx, alpha=self.alpha
+                word=word, word_index=idx, alpha=alpha
             )
-        acceptance_vector = self.alpha @ np.ones(self.N)
-        # self.acceptance_vector = self.model.addMVar(
-        #     shape=(S), vtype=GRB.BINARY, name="acceptance"
-        # )
-        # self.model.addConstr(self.acceptance_vector == self.alpha @ np.ones(self.N))
+        acceptance_vector = alpha @ np.ones(self.N)
 
         # Create auxiliary variables: matrices of size n x n.
         # z1[i,j] will indicate (alpha[i]==0 and alpha[j]==0).
@@ -181,12 +175,12 @@ class Problem:
         z2 = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="z2")
 
         # Define phi (n x n) as the variable that will be related to z1 and z2.
-        self.phi = self.model.addMVar(shape=(S, S), lb=-GRB.INFINITY, name="phi")
+        phi = self.model.addMVar(shape=(S, S), lb=-GRB.INFINITY, name="phi")
 
         # ----- Diagonal constraint -----
         # For i = j, we want phi[i,i] = 0.
         # The .diag() method selects the diagonal elements.
-        self.model.addConstr(self.phi.diagonal() == 0, name="phi_diag")
+        self.model.addConstr(phi.diagonal() == 0, name="phi_diag")
 
         # ----- Off-diagonal constraints -----
         # We now add the constraints in a vectorized manner.
@@ -218,13 +212,13 @@ class Problem:
         # ----- Relate phi to z1 and z2 -----
         # The constraint for phi is defined as:
         #   phi[i,j] = 1 − 2*z1[i,j] − z2[i,j]
-        non_diag_mask = ~np.eye(self.phi.shape[0], dtype=bool)
+        non_diag_mask = ~np.eye(phi.shape[0], dtype=bool)
         self.model.addConstr(
-            self.phi[non_diag_mask] == 1 - 2 * z1[non_diag_mask] - z2[non_diag_mask],
+            phi[non_diag_mask] == 1 - 2 * z1[non_diag_mask] - z2[non_diag_mask],
             name="phi_def",
         )
 
-        distance_sum = (self.phi * distance_matrix * sample_pair_freq_matrix).sum()
+        distance_sum = (phi * distance_matrix * sample_pair_freq_matrix).sum()
 
         self.model.setObjective(expr=distance_sum, sense=GRB.MAXIMIZE)
         self.model.setParam("MIPFocus", 2)
@@ -236,41 +230,36 @@ class Problem:
         distance_matrix: np.ndarray,
     ):
         S = len(sample)
-        self.alpha = self.model.addMVar(
-            shape=(S, self.N), vtype=GRB.BINARY, name="alpha"
-        )
+        alpha = self.model.addMVar(shape=(S, self.N), vtype=GRB.BINARY, name="alpha")
         for idx, word in enumerate(sample):
             self.classifier.generate_clauses_unlabeled(
-                word=word, word_index=idx, alpha=self.alpha
+                word=word, word_index=idx, alpha=alpha
             )
-        self.acceptance_vector = self.model.addMVar(
+        acceptance_vector = self.model.addMVar(
             shape=(S,), vtype=GRB.BINARY, name="gamma"
         )
-        self.rejected_vector = self.model.addMVar(
-            shape=(S,), vtype=GRB.BINARY, name="beta"
-        )
+        rejected_vector = self.model.addMVar(shape=(S,), vtype=GRB.BINARY, name="beta")
         self.model.addConstr(
-            (self.acceptance_vector == self.alpha @ np.ones(self.N)),
+            (acceptance_vector == alpha @ np.ones(self.N)),
             name="gamma",
         )
         self.model.addConstr(
-            (self.rejected_vector == 1 - self.alpha @ np.ones(self.N)),
+            (rejected_vector == 1 - alpha @ np.ones(self.N)),
             name="beta",
         )
-        self.cross_class_mask = (
-            self.acceptance_vector.reshape(-1, 1)
-            @ self.rejected_vector.reshape(-1, 1).transpose()
+        cross_class_mask = (
+            acceptance_vector.reshape(-1, 1)
+            @ rejected_vector.reshape(-1, 1).transpose()
         )
         cross_distance_sum = (
-            self.cross_class_mask * distance_matrix * sample_pair_freq_matrix
+            cross_class_mask * distance_matrix * sample_pair_freq_matrix
         ).sum()
 
-        self.normal_class_mark = (
-            self.rejected_vector.reshape(-1, 1)
-            @ self.rejected_vector.reshape(-1, 1).transpose()
+        normal_class_mark = (
+            rejected_vector.reshape(-1, 1) @ rejected_vector.reshape(-1, 1).transpose()
         )
         normal_distance_sum = (
-            self.normal_class_mark * distance_matrix * sample_pair_freq_matrix
+            normal_class_mark * distance_matrix * sample_pair_freq_matrix
         ).sum()
 
         self.model.setObjective(
