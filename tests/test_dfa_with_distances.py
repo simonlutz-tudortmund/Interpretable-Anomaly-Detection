@@ -1,4 +1,7 @@
-from src.milp.milp_data_file import learn_dfa_with_distances_quadratic
+from src.milp.milp_data_file import (
+    learn_dfa_with_distances_linear,
+    learn_dfa_with_distances_quadratic,
+)
 import pytest
 import random
 
@@ -111,11 +114,11 @@ class TestDFALearningWithDistances:
         distance_function = distance_function
         sample, alphabet = sample_data
 
-        dfa = learn_dfa_with_distances_quadratic(
+        dfa = learn_dfa_with_distances_linear(
             sample=sample,
             alphabet=alphabet,
             distance_function=distance_function,
-            dfa_size=3,
+            dfa_size=4,
             lambda_l=None,
             lambda_s=None,
             lambda_p=None,

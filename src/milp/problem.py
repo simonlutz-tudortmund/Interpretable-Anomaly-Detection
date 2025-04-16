@@ -177,16 +177,16 @@ class Problem:
         # Create auxiliary variables: matrices of size n x n.
         # z1[i,j] will indicate (alpha[i]==0 and alpha[j]==0).
         # z2[i,j] will indicate (alpha[i]==1 and alpha[j]==1).
-        z1 = self.model.addMVar(shape=(S), vtype=GRB.BINARY, name="z1")
-        z2 = self.model.addMVar(shape=(S), vtype=GRB.BINARY, name="z2")
+        z1 = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="z1")
+        z2 = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="z2")
 
         # Define phi (n x n) as the variable that will be related to z1 and z2.
-        phi = self.model.addMVar(shape=(S), lb=-GRB.INFINITY, name="phi")
+        self.phi = self.model.addMVar(shape=(S, S), lb=-GRB.INFINITY, name="phi")
 
         # ----- Diagonal constraint -----
         # For i = j, we want phi[i,i] = 0.
         # The .diag() method selects the diagonal elements.
-        self.model.addConstr(phi.diag() == 0, name="phi_diag")
+        self.model.addConstr(self.phi.diagonal() == 0, name="phi_diag")
 
         # ----- Off-diagonal constraints -----
         # We now add the constraints in a vectorized manner.
@@ -218,7 +218,11 @@ class Problem:
         # ----- Relate phi to z1 and z2 -----
         # The constraint for phi is defined as:
         #   phi[i,j] = 1 − 2*z1[i,j] − z2[i,j]
-        self.model.addConstr(phi == 1 - 2 * z1 - z2, name="phi_def")
+        non_diag_mask = ~np.eye(self.phi.shape[0], dtype=bool)
+        self.model.addConstr(
+            self.phi[non_diag_mask] == 1 - 2 * z1[non_diag_mask] - z2[non_diag_mask],
+            name="phi_def",
+        )
 
         distance_sum = (self.phi * distance_matrix * sample_pair_freq_matrix).sum()
 
