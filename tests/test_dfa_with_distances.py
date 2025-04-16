@@ -5,6 +5,11 @@ from src.milp.milp_data_file import (
 import pytest
 import random
 
+from src.utils.distance_functions import (
+    calculate_distance_matrix,
+    distance_function_names,
+)
+
 
 class TestDFALearningWithDistances:
     @pytest.fixture
@@ -96,9 +101,62 @@ class TestDFALearningWithDistances:
             verbose=2,
         )
 
-        # Verify bounds are respected
-        accepted_count = sum(1 if trace in dfa else 0 for trace in sample)
-        print(dfa)
+        # Get accepted and rejected samples
+        accepted_sample = [trace for trace in sample if trace in dfa]
+        rejected_sample = [trace for trace in sample if trace not in dfa]
+
+        # Calculate distance matrix for the sample
+        distance_matrix = calculate_distance_matrix(
+            sample=sample,
+            distance_func=distance_function_names[distance_function],
+        )
+
+        # Calculate objective value for the current partition
+        current_objective = calculate_partition_objective(
+            sample=sample,
+            accepted=accepted_sample,
+            rejected=rejected_sample,
+            distance_matrix=distance_matrix,
+        )
+
+        # Iterate over all possible partitions with the same accepted count
+        num_accepted = len(accepted_sample)
+        n = len(sample)
+        max_objective = current_objective
+        best_partition = None
+
+        import itertools
+
+        # Generate all possible combinations of accepted traces with the same length
+        for accepted_indices in itertools.combinations(range(n), num_accepted):
+            candidate_accepted = [sample[i] for i in accepted_indices]
+            candidate_rejected = [
+                sample[i] for i in range(n) if i not in accepted_indices
+            ]
+
+            objective = calculate_partition_objective(
+                sample=sample,
+                accepted=candidate_accepted,
+                rejected=candidate_rejected,
+                distance_matrix=distance_matrix,
+            )
+
+            if objective > max_objective:
+                max_objective = objective
+                best_partition = (candidate_accepted, candidate_rejected)
+
+        # Assert that our DFA found the optimal partition
+        assert current_objective == max_objective, (
+            f"DFA partition objective ({current_objective}) is not equal to the optimal objective ({max_objective})"
+        )
+
+        # Print information if the test fails
+        if current_objective < max_objective and best_partition:
+            print("DFA's partition is not optimal.")
+            print(f"DFA accepted: {accepted_sample}")
+            print(f"DFA rejected: {rejected_sample}")
+            print(f"Best accepted: {best_partition[0]}")
+            print(f"Best rejected: {best_partition[1]}")
 
     @pytest.mark.parametrize(
         "distance_function",
@@ -125,6 +183,84 @@ class TestDFALearningWithDistances:
             verbose=2,
         )
 
-        # Verify bounds are respected
-        accepted_count = sum(1 if trace in dfa else 0 for trace in sample)
-        print(dfa)
+        # Get accepted and rejected samples
+        accepted_sample = [trace for trace in sample if trace in dfa]
+        rejected_sample = [trace for trace in sample if trace not in dfa]
+
+        # Calculate distance matrix for the sample
+        distance_matrix = calculate_distance_matrix(
+            sample=sample,
+            distance_func=distance_function_names[distance_function],
+        )
+
+        # Calculate objective value for the current partition
+        current_objective = calculate_partition_objective(
+            sample=sample,
+            accepted=accepted_sample,
+            rejected=rejected_sample,
+            distance_matrix=distance_matrix,
+        )
+
+        # Iterate over all possible partitions with the same accepted count
+        num_accepted = len(accepted_sample)
+        n = len(sample)
+        max_objective = current_objective
+        best_partition = None
+
+        import itertools
+
+        # Generate all possible combinations of accepted traces with the same length
+        for accepted_indices in itertools.combinations(range(n), num_accepted):
+            candidate_accepted = [sample[i] for i in accepted_indices]
+            candidate_rejected = [
+                sample[i] for i in range(n) if i not in accepted_indices
+            ]
+
+            objective = calculate_partition_objective(
+                sample=sample,
+                accepted=candidate_accepted,
+                rejected=candidate_rejected,
+                distance_matrix=distance_matrix,
+            )
+
+            if objective > max_objective:
+                max_objective = objective
+                best_partition = (candidate_accepted, candidate_rejected)
+
+        # Assert that our DFA found the optimal partition
+        assert current_objective == max_objective, (
+            f"DFA partition objective ({current_objective}) is not equal to the optimal objective ({max_objective})"
+        )
+
+        # Print information if the test fails
+        if current_objective < max_objective and best_partition:
+            print("DFA's partition is not optimal.")
+            print(f"DFA accepted: {accepted_sample}")
+            print(f"DFA rejected: {rejected_sample}")
+            print(f"Best accepted: {best_partition[0]}")
+            print(f"Best rejected: {best_partition[1]}")
+
+
+def calculate_partition_objective(sample, accepted, rejected, distance_matrix):
+    """Calculate the objective value for a given partition of accepted and rejected traces."""
+    # Map traces to their indices in the sample
+    trace_to_index = {trace: i for i, trace in enumerate(sample)}
+
+    # Sum of distances between rejected and accepted traces
+    between_sum = 0
+    for rejected_trace in rejected:
+        for accepted_trace in accepted:
+            i = trace_to_index[rejected_trace]
+            j = trace_to_index[accepted_trace]
+            between_sum += distance_matrix[i][j]
+
+    # Sum of distances between rejected traces
+    within_sum = 0
+    for i, rejected_trace1 in enumerate(rejected):
+        for rejected_trace2 in rejected[i + 1 :]:
+            i = trace_to_index[rejected_trace1]
+            j = trace_to_index[rejected_trace2]
+            within_sum += distance_matrix[i][j]
+
+    # Return objective: maximize distance between classes, minimize within rejected class
+    return between_sum - within_sum
