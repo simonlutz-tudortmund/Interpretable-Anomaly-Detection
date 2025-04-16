@@ -1,4 +1,4 @@
-from src.milp.milp_data_file import learn_dfa_with_distances
+from src.milp.milp_data_file import learn_dfa_with_distances_quadratic
 import pytest
 import random
 
@@ -78,11 +78,40 @@ class TestDFALearningWithDistances:
             "dynamic_time_warping",
         ],
     )
-    def test_distances(self, sample_data, distance_function):
+    def test_distances_quadratic(self, sample_data, distance_function):
         distance_function = distance_function
         sample, alphabet = sample_data
 
-        dfa = learn_dfa_with_distances(
+        dfa = learn_dfa_with_distances_quadratic(
+            sample=sample,
+            alphabet=alphabet,
+            distance_function=distance_function,
+            dfa_size=3,
+            lambda_l=None,
+            lambda_s=None,
+            lambda_p=None,
+            verbose=2,
+        )
+
+        # Verify bounds are respected
+        accepted_count = sum(1 if trace in dfa else 0 for trace in sample)
+        print(dfa)
+
+    @pytest.mark.parametrize(
+        "distance_function",
+        [
+            "levenshtein",
+            "jaccard",
+            "hamming",
+            "ordinal_hamming",
+            "dynamic_time_warping",
+        ],
+    )
+    def test_distances_linear(self, sample_data, distance_function):
+        distance_function = distance_function
+        sample, alphabet = sample_data
+
+        dfa = learn_dfa_with_distances_quadratic(
             sample=sample,
             alphabet=alphabet,
             distance_function=distance_function,

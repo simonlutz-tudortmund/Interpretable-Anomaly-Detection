@@ -1,7 +1,7 @@
 import logging
 import sys
 from typing import Optional
-from gurobipy import Model, GRB, quicksum
+from gurobipy import GRB, Model, quicksum
 import numpy as np
 from src.milp.classification import GurobiClassification
 from src.utils.dfa import DFABuilder
@@ -18,7 +18,7 @@ class Problem:
         self.restart()
 
     def restart(self):
-        self.model = Model(f"Hypothesis_{self.N}")
+        self.model: Model = Model(f"Hypothesis_{self.N}")
 
     def add_automaton_constraints(self):
         self.states = range(self.N)
@@ -168,51 +168,64 @@ class Problem:
             self.classifier.generate_clauses_unlabeled(
                 word=word, word_index=idx, alpha=self.alpha
             )
-        self.acceptance_vector = self.alpha @ np.ones(self.N)
+        acceptance_vector = self.alpha @ np.ones(self.N)
+        # self.acceptance_vector = self.model.addMVar(
+        #     shape=(S), vtype=GRB.BINARY, name="acceptance"
+        # )
+        # self.model.addConstr(self.acceptance_vector == self.alpha @ np.ones(self.N))
 
-        self.phi = self.model.addMVar(shape=(S, S), vtype=GRB.INTEGER, name="phi")
-        self.z = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="z")
+        # Create auxiliary variables: matrices of size n x n.
+        # z1[i,j] will indicate (alpha[i]==0 and alpha[j]==0).
+        # z2[i,j] will indicate (alpha[i]==1 and alpha[j]==1).
+        z1 = self.model.addMVar(shape=(S), vtype=GRB.BINARY, name="z1")
+        z2 = self.model.addMVar(shape=(S), vtype=GRB.BINARY, name="z2")
 
-        # Add constraints for all pairs (i, j)
-        for i in range(S):
-            for j in range(S):
-                if i == j:
-                    # Diagonal: enforce self.phi[i,i] = 0
-                    self.model.addConstr(self.phi[i, i] == 0, name=f"phi_diag_{i}")
-                    # For diagonal, set self.z[i,i] = alpha[i]
-                    self.model.addConstr(
-                        self.z[i, i] == self.acceptance_vector[i], name=f"z_diag_{i}"
-                    )
-                else:
-                    # Linearize the product self.z[i,j] = alpha[i] * alpha[j]
-                    self.model.addConstr(
-                        self.z[i, j] <= self.acceptance_vector[i],
-                        name=f"z_le_alpha_{i}_{j}",
-                    )
-                    self.model.addConstr(
-                        self.z[i, j] <= self.acceptance_vector[j],
-                        name=f"z_le_alpha_{j}_{i}",
-                    )
-                    self.model.addConstr(
-                        self.z[i, j]
-                        >= self.acceptance_vector[i] + self.acceptance_vector[j] - 1,
-                        name=f"z_ge_sum_{i}_{j}",
-                    )
-                    # Define phi_{ij} = -1 + 2*(alpha[i] + alpha[j]) - 3*self.z[i,j]
-                    self.model.addConstr(
-                        self.phi[i, j]
-                        == -1
-                        + 2 * (self.acceptance_vector[i] + self.acceptance_vector[j])
-                        - 3 * self.z[i, j],
-                        name=f"phi_def_{i}_{j}",
-                    )
+        # Define phi (n x n) as the variable that will be related to z1 and z2.
+        phi = self.model.addMVar(shape=(S), lb=-GRB.INFINITY, name="phi")
+
+        # ----- Diagonal constraint -----
+        # For i = j, we want phi[i,i] = 0.
+        # The .diag() method selects the diagonal elements.
+        self.model.addConstr(phi.diag() == 0, name="phi_diag")
+
+        # ----- Off-diagonal constraints -----
+        # We now add the constraints in a vectorized manner.
+        # Using broadcasting, alpha[:, None] is an (n x 1) column vector
+        # and alpha[None, :] is an (1 x n) row vector.
+        #
+        # For z1: (which indicates when both alphas are 0)
+        #   z1[i,j] ≤ 1 − alpha[i]
+        #   z1[i,j] ≤ 1 − alpha[j]
+        #   z1[i,j] ≥ 1 − alpha[i] − alpha[j]
+        self.model.addConstr(z1 <= 1 - acceptance_vector[:, None], name="z1_upper1")
+        self.model.addConstr(z1 <= 1 - acceptance_vector[None, :], name="z1_upper2")
+        self.model.addConstr(
+            z1 >= 1 - acceptance_vector[:, None] - acceptance_vector[None, :],
+            name="z1_lower",
+        )
+
+        # For z2: (which indicates when both alphas are 1)
+        #   z2[i,j] ≤ alpha[i]
+        #   z2[i,j] ≤ alpha[j]
+        #   z2[i,j] ≥ alpha[i] + alpha[j] − 1
+        self.model.addConstr(z2 <= acceptance_vector[:, None], name="z2_upper1")
+        self.model.addConstr(z2 <= acceptance_vector[None, :], name="z2_upper2")
+        self.model.addConstr(
+            z2 >= acceptance_vector[:, None] + acceptance_vector[None, :] - 1,
+            name="z2_lower",
+        )
+
+        # ----- Relate phi to z1 and z2 -----
+        # The constraint for phi is defined as:
+        #   phi[i,j] = 1 − 2*z1[i,j] − z2[i,j]
+        self.model.addConstr(phi == 1 - 2 * z1 - z2, name="phi_def")
 
         distance_sum = (self.phi * distance_matrix * sample_pair_freq_matrix).sum()
 
         self.model.setObjective(expr=distance_sum, sense=GRB.MAXIMIZE)
         self.model.setParam("MIPFocus", 2)
 
-    def add_distance_sample_constraints(
+    def add_distance_sample_constraints_quadratic(
         self,
         sample: list[tuple[str, ...]],
         sample_pair_freq_matrix: np.ndarray,

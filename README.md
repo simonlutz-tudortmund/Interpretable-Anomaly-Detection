@@ -49,7 +49,8 @@ else:
 
 - `learn_dfa_with_bounds(sample, alphabet, lower_bound, upper_bound, min_dfa_size=1)`: Learns the minimal DFA from the given sample and alphabet within the provided bounds.
 - `learn_dfa_with_labels(positive_sample, negative_sample, alphabet, min_dfa_size=1)`: Learns the minimal DFA that accepts all words from positive_sample and rejects all negative_sample.
-- `learn_dfa_with_distances(sample, alphabet, distance_function, dfa_size=1)`: Learns a DFA from that maximizes distance between accepted and rejected words, while minimizing distance between rejected words.
+- `learn_dfa_with_distances_linear(sample, alphabet, distance_function, dfa_size=1)`: Learns a DFA from that maximizes distance between accepted and rejected words, while minimizing distance between rejected words using a combination of linear constraints.
+- `learn_dfa_with_distances_quadratic(sample, alphabet, distance_function, dfa_size=1)`: Learns a DFA from that maximizes distance between accepted and rejected words, while minimizing distance between rejected words using multiplication of matrix variables.
 
 ### Constraints
 
