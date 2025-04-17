@@ -199,7 +199,7 @@ def learn_dfa_with_distances_linear(
     sample_freq = np.array(
         [sample_counts[tuple(word)] for word in unique_samples]
     ).reshape(-1, 1)
-    sample_freq = sample_freq / np.sum(sample_freq)
+    # sample_freq = sample_freq / np.sum(sample_freq)
     sample_pair_freq = sample_freq @ sample_freq.T
 
     distance_function_callable = distance_function_names[distance_function]
@@ -214,9 +214,8 @@ def learn_dfa_with_distances_linear(
     problem.model.setParam("Threads", 1)
 
     # Aggressive presolve + relaxation heuristic
+    # problem.model.setParam("DegenMoves", 0)
     problem.model.setParam("Presolve", 2)
-    # if len(sample) > 1000:
-    #     problem.model.setParam("NoRelHeurTime", 1800)
     # problem.model.setParam("Cuts", 0)
 
     # # Avoid Simplex altogether

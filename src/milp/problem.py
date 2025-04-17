@@ -179,9 +179,15 @@ class Problem:
             name="beta_lower",
         )
 
-        # Precompute constants for the objective
+        # Precompute and scale c matrix to adjust objective range
         c = distance_matrix * sample_pair_freq_matrix
         sum_c = c.sum()
+        if sum_c != 0:
+            scaling_factor = 1e6 / sum_c
+            c *= scaling_factor
+        else:
+            # Handle case where sum_c is zero (unlikely, adjust as needed)
+            pass
 
         # Linear coefficients for each alpha[i]
         row_sums = c.sum(axis=1)
@@ -193,7 +199,7 @@ class Problem:
         beta_part = (beta * c).sum()
 
         # Final objective without gamma and phi variables
-        distance_sum = -sum_c + linear_part - 3 * beta_part
+        distance_sum = linear_part - 3 * beta_part
 
         self.model.setObjective(expr=distance_sum, sense=GRB.MAXIMIZE)
         self.model.setParam("MIPFocus", 2)
