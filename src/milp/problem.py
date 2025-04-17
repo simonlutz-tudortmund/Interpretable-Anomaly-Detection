@@ -168,44 +168,10 @@ class Problem:
             )
         acceptance_vector = alpha @ np.ones(self.N)
 
-        # Create auxiliary variables: matrices of size n x n.
-        # gamma[i,j] will indicate (alpha[i]==0 and alpha[j]==0).
-        # beta[i,j] will indicate (alpha[i]==1 and alpha[j]==1).
-        gamma = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="gamma")
+        # Create beta variables for alpha[i] & alpha[j] products
         beta = self.model.addMVar(shape=(S, S), vtype=GRB.BINARY, name="beta")
 
-        # Define phi (n x n) as the variable that will be related to gamma and beta.
-        phi = self.model.addMVar(shape=(S, S), lb=-GRB.INFINITY, name="phi")
-
-        # ----- Diagonal constraint -----
-        # For i = j, we want phi[i,i] = 0.
-        # The .diag() method selects the diagonal elements.
-        self.model.addConstr(phi.diagonal() == 0, name="phi_diag")
-
-        # ----- Off-diagonal constraints -----
-        # We now add the constraints in a vectorized manner.
-        # Using broadcasting, alpha[:, None] is an (n x 1) column vector
-        # and alpha[None, :] is an (1 x n) row vector.
-        #
-        # For gamma: (which indicates when both alphas are 0)
-        #   gamma[i,j] ≤ 1 − alpha[i]
-        #   gamma[i,j] ≤ 1 − alpha[j]
-        #   gamma[i,j] ≥ 1 − alpha[i] − alpha[j]
-        self.model.addConstr(
-            gamma <= 1 - acceptance_vector[:, None], name="gamma_upper1"
-        )
-        self.model.addConstr(
-            gamma <= 1 - acceptance_vector[None, :], name="gamma_upper2"
-        )
-        self.model.addConstr(
-            gamma >= 1 - acceptance_vector[:, None] - acceptance_vector[None, :],
-            name="gamma_lower",
-        )
-
-        # For beta: (which indicates when both alphas are 1)
-        #   beta[i,j] ≤ alpha[i]
-        #   beta[i,j] ≤ alpha[j]
-        #   beta[i,j] ≥ alpha[i] + alpha[j] − 1
+        # Beta constraints for alpha[i] * alpha[j]
         self.model.addConstr(beta <= acceptance_vector[:, None], name="beta_upper1")
         self.model.addConstr(beta <= acceptance_vector[None, :], name="beta_upper2")
         self.model.addConstr(
@@ -213,16 +179,21 @@ class Problem:
             name="beta_lower",
         )
 
-        # ----- Relate phi to gamma and beta -----
-        # The constraint for phi is defined as:
-        #   phi[i,j] = 1 − 2*gamma[i,j] − beta[i,j]
-        non_diag_mask = ~np.eye(phi.shape[0], dtype=bool)
-        self.model.addConstr(
-            phi[non_diag_mask] == 1 - 2 * gamma[non_diag_mask] - beta[non_diag_mask],
-            name="phi_def",
-        )
+        # Precompute constants for the objective
+        c = distance_matrix * sample_pair_freq_matrix
+        sum_c = c.sum()
 
-        distance_sum = (phi * distance_matrix * sample_pair_freq_matrix).sum()
+        # Linear coefficients for each alpha[i]
+        row_sums = c.sum(axis=1)
+        col_sums = c.sum(axis=0)
+        linear_coeffs = 2 * (row_sums + col_sums)
+
+        # Compute parts of the objective
+        linear_part = acceptance_vector @ linear_coeffs
+        beta_part = (beta * c).sum()
+
+        # Final objective without gamma and phi variables
+        distance_sum = -sum_c + linear_part - 3 * beta_part
 
         self.model.setObjective(expr=distance_sum, sense=GRB.MAXIMIZE)
         self.model.setParam("MIPFocus", 2)

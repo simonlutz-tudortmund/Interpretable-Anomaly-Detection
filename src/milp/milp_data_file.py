@@ -217,12 +217,12 @@ def learn_dfa_with_distances_linear(
     problem.model.setParam("Presolve", 2)
     # if len(sample) > 1000:
     #     problem.model.setParam("NoRelHeurTime", 1800)
-    problem.model.setParam("Cuts", 0)
+    # problem.model.setParam("Cuts", 0)
 
-    # Avoid Simplex altogether
-    problem.model.setParam("Method", 2)
-    problem.model.setParam("Crossover", 0)
-    problem.model.setParam("NodeMethod", 2)
+    # # Avoid Simplex altogether
+    # problem.model.setParam("Method", 2)
+    # problem.model.setParam("Crossover", 0)
+    # problem.model.setParam("NodeMethod", 2)
 
     problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
 
