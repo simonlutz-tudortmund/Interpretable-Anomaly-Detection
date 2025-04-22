@@ -48,9 +48,9 @@ class Problem:
         # for var in self.terminal.values():
         #     var.BranchPriority = 2
 
-        for q in self.states:
-            for a, letter in enumerate(self.alphabet):
-                self.model.addLConstr((self.terminal[q] <= self.transition[q, a, q]))
+        # for q in self.states:
+        #     for a, letter in enumerate(self.alphabet):
+        #         self.model.addLConstr((self.terminal[q] <= self.transition[q, a, q]))
 
         ########################################################################################################################
         #                                           Prefix tree for words:
@@ -181,13 +181,6 @@ class Problem:
 
         # Precompute and scale c matrix to adjust objective range
         c = distance_matrix * sample_pair_freq_matrix
-        sum_c = c.sum()
-        if sum_c != 0:
-            scaling_factor = 1e6 / sum_c
-            c *= scaling_factor
-        else:
-            # Handle case where sum_c is zero (unlikely, adjust as needed)
-            pass
 
         # Linear coefficients for each alpha[i]
         row_sums = c.sum(axis=1)

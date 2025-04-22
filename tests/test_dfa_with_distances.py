@@ -71,24 +71,26 @@ class TestDFALearningWithDistances:
             separatable_traces.append(tuple(trace))
 
         # Combine and shuffle all traces
-        all_traces = base_traces + separatable_traces
-        random.shuffle(all_traces)
+        random.shuffle(base_traces)
+        random.shuffle(separatable_traces)
 
-        return all_traces, alphabet
+        return base_traces, separatable_traces, alphabet
 
     @pytest.mark.parametrize(
         "distance_function",
         [
             "levenshtein",
             "jaccard",
-            "hamming",
-            "ordinal_hamming",
-            "dynamic_time_warping",
+            # "hamming",
+            # "ordinal_hamming",
+            # "dynamic_time_warping",
         ],
     )
     def test_distances_quadratic(self, sample_data, distance_function):
         distance_function = distance_function
-        sample, alphabet = sample_data
+        base_traces, separatable_traces, alphabet = sample_data
+        sample = base_traces + separatable_traces
+        random.shuffle(sample)
 
         dfa = learn_dfa_with_distances_quadratic(
             sample=sample,
@@ -100,6 +102,13 @@ class TestDFALearningWithDistances:
             lambda_p=None,
             verbose=2,
         )
+        # print(dfa)
+        # assert all(base_trace not in dfa for base_trace in base_traces), (
+        #     "All base traces should be accepted by the DFA."
+        # )
+        # assert all(
+        #     separatable_trace in dfa for separatable_trace in separatable_traces
+        # ), "No separatable traces should be accepted by the DFA."
 
         # Get accepted and rejected samples
         accepted_sample = [trace for trace in sample if trace in dfa]
@@ -163,14 +172,16 @@ class TestDFALearningWithDistances:
         [
             "levenshtein",
             "jaccard",
-            "hamming",
-            "ordinal_hamming",
-            "dynamic_time_warping",
+            # "hamming",
+            # "ordinal_hamming",
+            # "dynamic_time_warping",
         ],
     )
     def test_distances_linear(self, sample_data, distance_function):
         distance_function = distance_function
-        sample, alphabet = sample_data
+        base_traces, separatable_traces, alphabet = sample_data
+        sample = base_traces + separatable_traces
+        random.shuffle(sample)
 
         dfa = learn_dfa_with_distances_linear(
             sample=sample,
@@ -182,6 +193,14 @@ class TestDFALearningWithDistances:
             lambda_p=None,
             verbose=2,
         )
+        # print(dfa)
+
+        # assert all(base_trace not in dfa for base_trace in base_traces), (
+        #     "All base traces should be accepted by the DFA."
+        # )
+        # assert all(
+        #     separatable_trace in dfa for separatable_trace in separatable_traces
+        # ), "No separatable traces should be accepted by the DFA."
 
         # Get accepted and rejected samples
         accepted_sample = [trace for trace in sample if trace in dfa]

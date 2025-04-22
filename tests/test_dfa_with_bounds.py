@@ -1,3 +1,4 @@
+from sklearn import base
 from src.milp.milp_data_file import learn_dfa_with_bounds
 import pytest
 import random
@@ -21,7 +22,7 @@ class TestDFALearningWithBounds:
 
         # Generate base random traces
         base_traces = []
-        num_traces = 10  # Total number of traces
+        num_traces = 50  # Total number of traces
 
         # Generate 80% random traces that never contain "cc"
         for _ in range(int(num_traces * 0.8)):
@@ -63,22 +64,24 @@ class TestDFALearningWithBounds:
             separatable_traces.append(tuple(trace))
 
         # Combine and shuffle all traces
-        all_traces = base_traces + separatable_traces
-        random.shuffle(all_traces)
+        random.shuffle(base_traces)
+        random.shuffle(separatable_traces)
 
-        return all_traces, alphabet
+        return base_traces, separatable_traces, alphabet
 
     @pytest.mark.parametrize(
         "bound_values",
         [
-            (1, None),  # lower bound only
-            (None, 2),  # upper bound only
-            (1, 2),  # both bounds
+            (10, None),  # lower bound only
+            (None, 10),  # upper bound only
+            (10, 10),  # both bounds
         ],
     )
     def test_bounds(self, sample_data, bound_values):
         lower_bound, upper_bound = bound_values
-        sample, alphabet = sample_data
+        base_traces, separatable_traces, alphabet = sample_data
+        sample = base_traces + separatable_traces
+        random.shuffle(sample)
 
         dfa = learn_dfa_with_bounds(
             sample=sample,
@@ -110,6 +113,12 @@ class TestDFALearningWithBounds:
             assert accepted_count < len(sample), (
                 f"Degenerate solution, got {accepted_count}"
             )
+            # assert all(base_trace not in dfa for base_trace in base_traces), (
+            #     "All base traces should be accepted by the DFA."
+            # )
+            # assert all(
+            #     separatable_trace in dfa for separatable_trace in separatable_traces
+            # ), "No separatable traces should be accepted by the DFA."
 
     @pytest.mark.parametrize(
         "penalty_type",
@@ -127,15 +136,17 @@ class TestDFALearningWithBounds:
     @pytest.mark.parametrize(
         "bound_values",
         [
-            (1, None),  # lower bound only
-            (None, 2),  # upper bound only
-            (1, 2),  # both bounds
+            (10, None),  # lower bound only
+            (None, 10),  # upper bound only
+            (10, 10),  # both bounds
         ],
     )
     def test_combined_penalties(self, sample_data, penalty_type, bound_values):
         """Comprehensive test of all penalties with different bound configurations."""
         lower_bound, upper_bound = bound_values
-        sample, alphabet = sample_data
+        base_traces, separatable_traces, alphabet = sample_data
+        sample = base_traces + separatable_traces
+        random.shuffle(sample)
 
         # Set up the specific penalty
         lambda_s = 0.7 if penalty_type == "sink" else None
@@ -172,3 +183,9 @@ class TestDFALearningWithBounds:
             assert accepted_count < len(sample), (
                 f"Degenerate solution, got {accepted_count}"
             )
+        # assert all(base_trace not in dfa for base_trace in base_traces), (
+        #     "All base traces should be accepted by the DFA."
+        # )
+        # assert all(
+        #     separatable_trace in dfa for separatable_trace in separatable_traces
+        # ), "No separatable traces should be accepted by the DFA."

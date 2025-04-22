@@ -19,8 +19,8 @@ class CausalDFA:
         self.states: frozenset[int] = frozenset(all_states)
 
     def transition(self, current_state: int, input_symbol: str) -> int:
-        if current_state in self.final_states:
-            return current_state
+        # if current_state in self.final_states:
+        #     return current_state
         assert input_symbol in self.transitions[current_state]
         return self.transitions[current_state][input_symbol]
 

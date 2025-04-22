@@ -21,7 +21,7 @@ class TestDFALearningWithLabels:
 
         # Generate base random traces
         base_traces = []
-        num_traces = 10  # Total number of traces
+        num_traces = 100  # Total number of traces
 
         # Generate 80% random traces that never contain "cc"
         for _ in range(int(num_traces * 0.8)):
