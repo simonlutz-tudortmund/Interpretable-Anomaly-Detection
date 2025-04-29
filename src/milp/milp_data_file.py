@@ -4,7 +4,7 @@ import dis
 import itertools
 import logging
 from math import ceil, floor
-from typing import Literal, Optional
+from typing import Literal, Optional, Tuple
 
 from gurobipy import GRB
 import numpy as np
@@ -14,6 +14,7 @@ from src.utils.distance_functions import (
     distance_function_names,
 )
 from src.milp.problem import Problem
+from utils.dfa import CausalDFA
 
 
 def learn_dfa_with_bounds(
@@ -26,7 +27,7 @@ def learn_dfa_with_bounds(
     lambda_p: Optional[float],
     min_dfa_size: int,
     verbose=0,
-):
+) -> Tuple[CausalDFA, Problem]:
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
 
     if lower_bound and not lower_bound.is_integer():
@@ -103,7 +104,7 @@ def learn_dfa_with_bounds(
         if problem.model.status == GRB.OPTIMAL:
             logging.warning("\x1b[1;34m... optimal.\x1b[m")
             dfa = problem.get_automaton()
-            return dfa
+            return dfa, problem
     raise RuntimeError("DFA with at most {} states not found".format(max_size))
 
 
@@ -116,7 +117,7 @@ def learn_dfa_with_labels(
     lambda_p: Optional[float],
     min_dfa_size: int,
     verbose=0,
-):
+) -> Tuple[CausalDFA, Problem]:
     max_size = None
     for N in itertools.count(min_dfa_size):
         if max_size is not None and N > max_size:
@@ -167,7 +168,7 @@ def learn_dfa_with_labels(
         if problem.model.status == GRB.OPTIMAL:
             logging.warning("\x1b[1;34m... optimal.\x1b[m")
             dfa = problem.get_automaton()
-            return dfa
+            return dfa, problem
     raise RuntimeError("DFA with at most {} states not found".format(max_size))
 
 
@@ -182,7 +183,7 @@ def learn_dfa_with_distances_linear(
     lambda_p: Optional[float],
     dfa_size: int,
     verbose=0,
-):
+) -> Tuple[CausalDFA, Problem]:
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
     N = dfa_size
     unique_samples = []
@@ -249,7 +250,7 @@ def learn_dfa_with_distances_linear(
     if problem.model.status == GRB.OPTIMAL:
         logging.warning("\x1b[1;34m... optimal.\x1b[m")
         dfa = problem.get_automaton()
-        return dfa
+        return dfa, problem
     raise RuntimeError("DFA with {} states not found".format(N))
 
 
@@ -264,7 +265,7 @@ def learn_dfa_with_distances_quadratic(
     lambda_p: Optional[float],
     dfa_size: int,
     verbose=0,
-):
+) -> Tuple[CausalDFA, Problem]:
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
     N = dfa_size
     unique_samples = []
@@ -332,5 +333,5 @@ def learn_dfa_with_distances_quadratic(
     if problem.model.status == GRB.OPTIMAL:
         logging.warning("\x1b[1;34m... optimal.\x1b[m")
         dfa = problem.get_automaton()
-        return dfa
+        return dfa, problem
     raise RuntimeError("DFA with {} states not found".format(N))

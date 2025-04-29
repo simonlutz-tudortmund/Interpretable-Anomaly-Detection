@@ -45,7 +45,7 @@ upper_bound = None
 sample = df_pruned["Features"].values.tolist()
 alphabet = frozenset(value for trace in sample for value in trace)
 
-dfa = learn_dfa_with_bounds(
+dfa, _ = learn_dfa_with_bounds(
     sample=sample,
     alphabet=alphabet,
     lower_bound=lower_bound,

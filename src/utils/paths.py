@@ -22,3 +22,7 @@ def get_source_path() -> Path:
 
 def get_experiments_path() -> Path:
     return Path(os.path.join(os.getcwd(), "experiments"))
+
+
+def get_data_path() -> Path:
+    return Path(os.path.join(os.getcwd(), "data"))

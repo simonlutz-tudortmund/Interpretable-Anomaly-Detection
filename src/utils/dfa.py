@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+from graphviz import Digraph
+
 
 class CausalDFA:
     def __init__(
@@ -72,6 +74,35 @@ class CausalDFA:
                 self.initial_state,
             )
         )
+
+    def save_visualized_dfa(self, output_path="dfa"):
+        """
+        Generates a visualization of a DFA and saves it as an image.
+
+        Parameters:
+        - dfa (dict): A dictionary representing the DFA with keys:
+            'states' (iterable): The set of states.
+            'alphabet' (set): The set of input symbols.
+            'transitions' (dict): A mapping from (state, symbol) to next state.
+            'initial_state' (int/str): The initial state.
+            'final_states' (set): The set of accepting states.
+        - output_path (str): Path to save the resulting image (without extension).
+        """
+        dot = Digraph(format="png")
+
+        for state in self.states:
+            shape = "doublecircle" if state in self.final_states else "circle"
+            dot.node(str(state), shape=shape)
+
+        dot.node("start", shape="none", width="0")
+        dot.edge("start", str(self.initial_state))
+
+        for state in self.states:
+            for symbol, next_state in self.transitions[state].items():
+                if state != next_state:
+                    dot.edge(str(state), str(next_state), label=str(symbol))
+
+        dot.render(output_path, cleanup=True)
 
 
 class DFABuilder:
