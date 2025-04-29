@@ -33,7 +33,7 @@ sample = df_pruned["Features"].values.tolist()
 alphabet = frozenset(value for trace in sample for value in trace)
 
 
-dfa_unlabeled = learn_dfa_with_distances_linear(
+dfa_unlabeled, _ = learn_dfa_with_distances_linear(
     alphabet=alphabet,
     sample=sample,
     distance_function="levenshtein",

@@ -48,7 +48,7 @@ alphabet = frozenset(value for trace in sample for value in trace)
 positive_sample = df_pruned[df_pruned["Label"] == "Fail"]["Features"].values.tolist()
 negative_sample = df_pruned[df_pruned["Label"] == "Success"]["Features"].values.tolist()
 
-# dfa_labeled = learn_dfa_with_labels(
+# dfa_labeled, _ = learn_dfa_with_labels(
 #     alphabet=alphabet,
 #     positive_sample=positive_sample,
 #     negative_sample=negative_sample,
@@ -59,7 +59,7 @@ negative_sample = df_pruned[df_pruned["Label"] == "Success"]["Features"].values.
 #     verbose=2,
 # # )
 
-dfa_unlabeled = learn_dfa_with_bounds(
+dfa_unlabeled, _ = learn_dfa_with_bounds(
     alphabet=alphabet,
     sample=sample,
     lower_bound=lower_bound,
