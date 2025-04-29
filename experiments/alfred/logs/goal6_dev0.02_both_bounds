@@ -1,0 +1,12 @@
+2025-04-29 17:26:36,658 - INFO - DFA learned successfully
+<src.utils.dfa.CausalDFA object at 0x7f5e95126ea0>
+2025-04-29 17:26:36,659 - INFO - Runtime: 0.022059917449951172
+2025-04-29 17:26:36,665 - INFO -               precision    recall  f1-score   support
+
+           0       0.99      0.98      0.98        83
+           1       0.71      0.83      0.77         6
+
+    accuracy                           0.97        89
+   macro avg       0.85      0.90      0.88        89
+weighted avg       0.97      0.97      0.97        89
+

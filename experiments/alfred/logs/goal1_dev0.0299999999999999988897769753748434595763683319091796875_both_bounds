@@ -1,0 +1,18 @@
+2025-04-29 17:24:25,623 - ERROR - Test failed: 'decimal.Decimal' object has no attribute 'is_integer'
+Traceback (most recent call last):
+  File "/home/daniil_kaminskyi/Interpretable-Anomaly-Detection/experiments/alfred_experiment.py", line 108, in <module>
+    dfa, problem = learn_dfa_with_bounds(
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/daniil_kaminskyi/Interpretable-Anomaly-Detection/src/milp/milp_data_file.py", line 33, in learn_dfa_with_bounds
+    if lower_bound and not lower_bound.is_integer():
+                           ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'decimal.Decimal' object has no attribute 'is_integer'
+2025-04-29 17:24:32,510 - ERROR - Test failed: 'decimal.Decimal' object has no attribute 'is_integer'
+Traceback (most recent call last):
+  File "/home/daniil_kaminskyi/Interpretable-Anomaly-Detection/experiments/alfred_experiment.py", line 108, in <module>
+    dfa, problem = learn_dfa_with_bounds(
+                   ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/daniil_kaminskyi/Interpretable-Anomaly-Detection/src/milp/milp_data_file.py", line 33, in learn_dfa_with_bounds
+    if lower_bound and not lower_bound.is_integer():
+                           ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'decimal.Decimal' object has no attribute 'is_integer'
