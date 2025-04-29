@@ -14,6 +14,10 @@ from utils.dfa import CausalDFA
 from utils.paths import get_experiments_path
 from utils.util import get_bounds
 
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 # Configuration
 goals = [0, 1, 2, 3, 4, 5, 6]
 bound_deviations = [0.0, 0.01, 0.02, 0.03, 0.04, 0.05]
@@ -38,6 +42,7 @@ fieldnames = [
 ]
 base_folder = get_experiments_path().joinpath("alfred")
 CSV_PATH = str(base_folder.joinpath("results.csv"))
+
 
 # Initialize CSV with header
 with open(CSV_PATH, "w", newline="") as csvfile:
@@ -159,3 +164,58 @@ for goal in goals:
                 for handler in logger.handlers:
                     handler.close()
                     logger.removeHandler(handler)
+
+
+# Load the CSV data
+df = pd.read_csv(CSV_PATH)
+
+df["case_type"] = df["case_name"].map(
+    {"both_bounds": "TB", "upper_only": "UB", "lower_only": "LB"}
+)
+
+# Set up plot
+plt.figure(figsize=(16, 10))
+sns.set_style(style="whitegrid")
+color_palette = sns.color_palette("husl", n_colors=len(df["goal"].unique()))
+line_styles = {"TB": "-", "UB": "--", "LB": ":"}
+markers = {"TB": "o", "UB": "s", "LB": "D"}
+
+# Plot each combination
+for goal in [0, 2, 5]:
+    goal_df = df[df["goal"] == goal]
+    for case in ["TB", "UB", "LB"]:
+        case_df = goal_df[goal_df["case_type"] == case].sort_values("deviation")
+        if not case_df.empty:
+            plt.plot(
+                case_df["deviation"],
+                case_df["f1"],
+                color=color_palette[goal],
+                linestyle=line_styles[case],
+                marker=markers[case],
+                markersize=8,
+                linewidth=2.5,
+                label=f"Goal {goal} {case}",
+            )
+
+# Configure plot aesthetics
+plt.title("F1 Score vs Acceptance Bound Deviation", pad=20)
+plt.xlabel("Acceptance Bound Deviation", labelpad=15)
+plt.ylabel("F1 Score", labelpad=15)
+plt.ylim(0, 1.05)
+plt.xlim(left=0)
+
+# Create combined legend
+handles, labels = plt.gca().get_legend_handles_labels()
+plt.legend(
+    handles,
+    labels,
+    bbox_to_anchor=(1.05, 1),
+    loc="upper left",
+    borderaxespad=0.0,
+    frameon=True,
+    title="Goal & Bound Type",
+)
+
+plt.tight_layout()
+plt.savefig("all_goals_f1_vs_deviation.png")
+plt.close()

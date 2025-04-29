@@ -32,7 +32,7 @@ alphabet = {"a", "b", "c"}
 lower_bound = 2
 upper_bound = None
 
-dfa = learn_dfa_with_bounds(sample, alphabet, lower_bound, upper_bound, min_dfa_size=2)
+dfa, _ = learn_dfa_with_bounds(sample, alphabet, lower_bound, upper_bound, min_dfa_size=2)
 
 if dfa:
     print("Minimal DFA found:")
