@@ -71,7 +71,7 @@ class TestDFALearningWithLabels:
     def test_labels(self, sample_data):
         negative_sample, positive_sample, alphabet = sample_data
 
-        dfa = learn_dfa_with_labels(
+        dfa, _ = learn_dfa_with_labels(
             positive_sample=positive_sample,
             negative_sample=negative_sample,
             alphabet=alphabet,
@@ -108,7 +108,7 @@ class TestDFALearningWithLabels:
         lambda_l = 0.7 if penalty_type == "self_loop" else None
         lambda_p = 0.7 if penalty_type == "parallel" else None
 
-        dfa = learn_dfa_with_labels(
+        dfa, _ = learn_dfa_with_labels(
             positive_sample=positive_sample,
             negative_sample=negative_sample,
             alphabet=alphabet,

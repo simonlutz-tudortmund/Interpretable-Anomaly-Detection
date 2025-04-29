@@ -83,7 +83,7 @@ class TestDFALearningWithBounds:
         sample = base_traces + separatable_traces
         random.shuffle(sample)
 
-        dfa = learn_dfa_with_bounds(
+        dfa, _ = learn_dfa_with_bounds(
             sample=sample,
             alphabet=alphabet,
             lower_bound=lower_bound,
@@ -153,7 +153,7 @@ class TestDFALearningWithBounds:
         lambda_l = 0.7 if penalty_type == "self_loop" else None
         lambda_p = 0.7 if penalty_type == "parallel" else None
 
-        dfa = learn_dfa_with_bounds(
+        dfa, _ = learn_dfa_with_bounds(
             sample=sample,
             alphabet=alphabet,
             lower_bound=lower_bound,

@@ -92,7 +92,7 @@ class TestDFALearningWithDistances:
         sample = base_traces + separatable_traces
         random.shuffle(sample)
 
-        dfa = learn_dfa_with_distances_quadratic(
+        dfa, _ = learn_dfa_with_distances_quadratic(
             sample=sample,
             alphabet=alphabet,
             distance_function=distance_function,
@@ -183,7 +183,7 @@ class TestDFALearningWithDistances:
         sample = base_traces + separatable_traces
         random.shuffle(sample)
 
-        dfa = learn_dfa_with_distances_linear(
+        dfa, _ = learn_dfa_with_distances_linear(
             sample=sample,
             alphabet=alphabet,
             distance_function=distance_function,
