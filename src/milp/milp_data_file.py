@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import dis
 import itertools
 import logging
 from math import ceil, floor
@@ -20,8 +19,8 @@ from utils.dfa import CausalDFA
 def learn_dfa_with_bounds(
     sample: list[tuple[str, ...]],
     alphabet: frozenset[str],
-    lower_bound: float,
-    upper_bound: float,
+    lower_bound: Optional[float],
+    upper_bound: Optional[float],
     lambda_s: Optional[float],
     lambda_l: Optional[float],
     lambda_p: Optional[float],

@@ -1,9 +1,6 @@
 import re
 from typing import Tuple, Set
-from graphviz import Digraph
 import pandas as pd
-from milp.milp_data_file import learn_dfa_with_bounds, learn_dfa_with_labels
-from utils.dfa import CausalDFA
 from utils.paths import get_data_path
 
 
@@ -41,7 +38,7 @@ def load_alfred_data(goal: int) -> Tuple[pd.DataFrame, pd.DataFrame, Set[str]]:
 
 def load_hfds_data(
     seed: int, test_percentage: float, max_sequence_length: int
-) -> Tuple[pd.DataFrame, pd.DataFrame, Set[str]]:
+) -> Tuple[pd.DataFrame, pd.DataFrame, frozenset[str]]:
     """
     Load the HFDS dataset based on the provided seed and split percentage.
     Ensure that both train and test splits contain every letter of the alphabet.
