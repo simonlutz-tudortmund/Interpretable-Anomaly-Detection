@@ -26,6 +26,7 @@ def learn_dfa_with_bounds(
     lambda_p: Optional[float],
     min_dfa_size: int,
     verbose=0,
+    log_file: Optional[str] = None,
 ) -> Tuple[CausalDFA, Problem]:
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
 
@@ -72,11 +73,14 @@ def learn_dfa_with_bounds(
         # problem.model.setParam("Cuts", 0)
 
         # Avoid Simplex altogether
-        problem.model.setParam("Method", 2)
-        problem.model.setParam("Crossover", 0)
-        problem.model.setParam("NodeMethod", 2)
+        # problem.model.setParam("Method", 2)
+        # problem.model.setParam("Crossover", 0)
+        # problem.model.setParam("NodeMethod", 2)
+
+        problem.model.setParam("MIPGap", 0.05)
 
         problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
+        problem.model.setParam("LogFile", log_file if log_file and verbose >= 2 else None)
 
         problem.add_automaton_constraints()
         problem.add_unlabeled_sample_constraints(
@@ -116,6 +120,7 @@ def learn_dfa_with_labels(
     lambda_p: Optional[float],
     min_dfa_size: int,
     verbose=0,
+    log_file: Optional[str] = None,
 ) -> Tuple[CausalDFA, Problem]:
     max_size = None
     for N in itertools.count(min_dfa_size):
@@ -134,16 +139,17 @@ def learn_dfa_with_labels(
         problem.model.setParam("Threads", 1)
 
         # Aggressive presolve + relaxation heuristic
-        problem.model.setParam("Presolve", 2)
-        problem.model.setParam("NoRelHeurTime", 1800)
-        problem.model.setParam("Cuts", 0)
+        # problem.model.setParam("Presolve", 2)
+        # problem.model.setParam("NoRelHeurTime", 1800)
+        # problem.model.setParam("Cuts", 0)
 
-        # Avoid Simplex altogether
-        problem.model.setParam("Method", 2)
-        problem.model.setParam("Crossover", 0)
-        problem.model.setParam("NodeMethod", 2)
+        # # Avoid Simplex altogether
+        # problem.model.setParam("Method", 2)
+        # problem.model.setParam("Crossover", 0)
+        # problem.model.setParam("NodeMethod", 2)
 
         problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
+        problem.model.setParam("LogFile", log_file if log_file and verbose >= 2 else None)
 
         problem.add_automaton_constraints()
         problem.add_labeled_sample_constraints(
@@ -182,6 +188,7 @@ def learn_dfa_with_distances_linear(
     lambda_p: Optional[float],
     dfa_size: int,
     verbose=0,
+    log_file: Optional[str] = None,
 ) -> Tuple[CausalDFA, Problem]:
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
     N = dfa_size
@@ -224,6 +231,7 @@ def learn_dfa_with_distances_linear(
     # problem.model.setParam("NodeMethod", 2)
 
     problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
+    problem.model.setParam("LogFile", log_file if log_file and verbose >= 2 else None)
 
     problem.add_automaton_constraints()
     problem.add_distance_sample_constraints_linear(
@@ -264,6 +272,7 @@ def learn_dfa_with_distances_quadratic(
     lambda_p: Optional[float],
     dfa_size: int,
     verbose=0,
+    log_file: Optional[str] = None,
 ) -> Tuple[CausalDFA, Problem]:
     """Trains a DFA using the specified algorithm and returns the learned DFA."""
     N = dfa_size
@@ -307,6 +316,7 @@ def learn_dfa_with_distances_quadratic(
     problem.model.setParam("NodeMethod", 2)
 
     problem.model.setParam("OutputFlag", 1 if verbose >= 2 else 0)
+    problem.model.setParam("LogFile", log_file if log_file and verbose >= 2 else None)
 
     problem.add_automaton_constraints()
     problem.add_distance_sample_constraints_quadratic(

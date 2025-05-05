@@ -1,3 +1,8 @@
+import sys
+
+from sympy import sequence
+sys.path.append(".") 
+sys.path.append("./src") 
 import csv
 import logging
 import os
@@ -18,7 +23,7 @@ from src.utils.util import get_bounds
 # Configuration
 # CLASSES = range(7)  # Assuming classes 0-6
 # class_pairs = list(permutations(CLASSES, 2))  # All ordered pairs
-SEQUENCE_LENGTHS = [15, 20, 30]
+SEQUENCE_LENGTHS = [15, 20, 25, 30]
 TEST_SIZE = 0.2  # 20% for testing
 
 # Setup directories
@@ -34,11 +39,6 @@ SEEDS = [
     7239,
     11517,
     79820,
-    9471,
-    36624,
-    39871,
-    56085,
-    89095,
 ]
 fieldnames = [
     "seed",
@@ -72,8 +72,8 @@ def setup_logger(log_file):
     return logger
 
 
-for seed in SEEDS:
-    for max_sequence_length in SEQUENCE_LENGTHS:
+for max_sequence_length in SEQUENCE_LENGTHS:
+    for seed in SEEDS:
         try:
             train_df, test_df, alphabet = load_hfds_data(
                 seed=seed,
@@ -102,13 +102,20 @@ for seed in SEEDS:
                 dfa_file = str(
                     base_folder.joinpath(
                         "dfas",
-                        f"{case_name}_{max_sequence_length}_{seed}.log",
+                        f"{case_name}_{max_sequence_length}_{seed}",
+                    )
+                )
+                log_file_gurobi = str(
+                    base_folder.joinpath(
+                        "gurobi_logs",
+                        f"{case_name}_{max_sequence_length}_{seed}_gurobi.log",
                     )
                 )
                 logger = setup_logger(log_file)
 
                 row_data = {
                     "seed": seed,
+                    "max_sequence_length": max_sequence_length,
                     "case_name": case_name,
                     "lower_bound": lb,
                     "upper_bound": ub,
@@ -128,6 +135,7 @@ for seed in SEEDS:
                         lambda_l=None,
                         lambda_s=None,
                         lambda_p=None,
+                        log_file=log_file_gurobi,
                     )
 
                     test_df["Prediction"] = test_df.Features.apply(
@@ -153,7 +161,16 @@ for seed in SEEDS:
 
                     dfa.save_visualized_dfa(dfa_file)
                     logger.info(
-                        f"Success\n{dfa}\n{classification_report(test_df.Label, test_df.Prediction)}"
+                        f"Learned DFA saved to {dfa_file}\n"
+                        f"States: {len(dfa.states)}\n"
+                        f"Initital State: {dfa.initial_state}\n"
+                        f"Final States: {dfa.final_states}\n"
+                        f"Alphabet: {dfa.alphabet}\n"
+                        f"Transitions:\n"
+                        f"{"\n".join([f"{from_state} -> {symbol} -> {to_state}"  for from_state, symbols in dfa.transitions.items() for symbol, to_state in symbols.items()])}"
+                    )
+                    logger.info(
+                        f"\nSuccess\n{dfa}\n{classification_report(test_df.Label, test_df.Prediction)}"
                     )
 
                 except Exception as e:
