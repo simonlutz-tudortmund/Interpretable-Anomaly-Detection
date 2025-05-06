@@ -14,7 +14,7 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
-from experiments.data_loader import load_hfds_data
+from experiments.data_loader import load_bgl_data, load_hfds_data
 from src.milp.milp_data_file import learn_dfa_with_bounds
 from src.utils.paths import get_experiments_path
 from src.utils.util import get_bounds
@@ -81,7 +81,7 @@ def setup_logger(log_file):
 for max_sequence_length in SEQUENCE_LENGTHS:
     for seed in SEEDS:
         try:
-            train_df, test_df, alphabet = load_hfds_data(
+            train_df, test_df, alphabet = load_bgl_data(
                 seed=seed,
                 test_percentage=TEST_SIZE,
                 max_sequence_length=max_sequence_length,
