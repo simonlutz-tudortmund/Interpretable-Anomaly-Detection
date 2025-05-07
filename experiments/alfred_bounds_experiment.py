@@ -1,6 +1,7 @@
 import sys
-sys.path.append(".") 
-sys.path.append("./src") 
+
+sys.path.append(".")
+sys.path.append("./src")
 import csv
 import logging
 import math
@@ -29,12 +30,14 @@ TEST_SIZE = 0.2  # 20% for testing
 # Setup directories
 base_folder = get_experiments_path().joinpath("alfred")
 os.makedirs(base_folder.joinpath("logs"), exist_ok=True)
+os.makedirs(base_folder.joinpath("gurobi_logs"), exist_ok=True)
 os.makedirs(base_folder.joinpath("dfas"), exist_ok=True)
 
+
 # CSV Setup
-CSV_PATH = base_folder.joinpath("results_full.csv")
+CSV_PATH = base_folder.joinpath("results_bounds.csv")
 SEEDS = [
-    # 114,
+    114,
     28998,
     7239,
     11517,
@@ -247,12 +250,12 @@ for seed in SEEDS:
                             f"Final States: {dfa.final_states}\n"
                             f"Alphabet: {dfa.alphabet}\n"
                             f"Transitions:\n"
-                            f"{"\n".join([f"{from_state} -> {symbol} -> {to_state}"  for from_state, symbols in dfa.transitions.items() for symbol, to_state in symbols.items()])}"
+                            f"{'\n'.join([f'{from_state} -> {symbol} -> {to_state}' for from_state, symbols in dfa.transitions.items() for symbol, to_state in symbols.items()])}"
                         )
                         logger.info(
                             f"\nSuccess\n{dfa}\n{classification_report(test_df.Label, test_df.Prediction)}"
                         )
-                        
+
                     except Exception as e:
                         row_data["error_message"] = str(e)
                         logger.error(f"Error: {str(e)}", exc_info=True)
@@ -266,82 +269,3 @@ for seed in SEEDS:
 
         except Exception as e:
             print(f"Error processing pair ({class_a}, {class_b}): {str(e)}")
-
-
-# Visualization
-df = pd.read_csv(CSV_PATH)
-df["case_type"] = df.case_name.map(
-    {"both_bounds": "TB", "lower_only": "LB", "upper_only": "UB"}
-)
-
-# Aggregate results across all class pairs
-agg_df = (
-    df.groupby(["case_type", "deviation"])
-    .agg(mean_f1=("f1", "mean"), std_f1=("f1", "std"))
-    .reset_index()
-)
-
-plt.figure(figsize=(16, 10))
-sns.set_style(style="whitegrid")
-color_palette = sns.color_palette("husl", n_colors=3)
-color_palette = {
-    "TB": color_palette[0],
-    "UB": color_palette[1],
-    "LB": color_palette[2],
-}
-line_styles = {"TB": "-", "UB": "--", "LB": ":"}
-markers = {"TB": "o", "UB": "s", "LB": "D"}
-
-# Create plot
-for case_type in ["TB", "UB", "LB"]:
-    case_data = agg_df[agg_df.case_type == case_type].sort_values("deviation")
-    deviations = case_data.deviation
-    means = case_data.mean_f1
-    stds = case_data.std_f1
-
-    plt.plot(
-        deviations,
-        means,
-        label=case_type,
-        color=color_palette[case_type],
-        linestyle=line_styles[case_type],
-        marker=markers[case_type],
-        markersize=8,
-        linewidth=2.5,
-    )
-
-    plt.fill_between(
-        deviations,
-        means - stds,
-        means + stds,
-        color=color_palette[case_type],
-        alpha=0.2,
-    )
-
-plt.title("Average F1 Score vs Acceptance Bound Deviation", pad=15)
-plt.xlabel("Bound Deviation", labelpad=10)
-plt.ylabel("F1 Score", labelpad=10)
-plt.ylim(0, 1.05)
-plt.xlim(-0.005, max(bound_deviations) + 0.005)
-plt.grid(True, alpha=0.3)
-
-# Create legend
-handles, labels = plt.gca().get_legend_handles_labels()
-new_handles = [
-    plt.Line2D(
-        [0], [0], color=color_palette[label], linestyle=line_styles[label], lw=2.5
-    )
-    for label in labels
-]
-plt.legend(
-    new_handles,
-    labels,
-    title="Bound Type",
-    loc="lower left" if agg_df.mean_f1.min() < 0.5 else "upper right",
-    frameon=True,
-    framealpha=0.9,
-)
-
-plt.tight_layout()
-plt.savefig("aggregated_analysis_permutated.png", dpi=300)
-plt.show()

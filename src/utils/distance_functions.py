@@ -66,29 +66,34 @@ def calculate_distance_matrix(
     distance_func: Callable[[Tuple[str, ...], Tuple[str, ...]], float],
 ) -> np.ndarray:
     """
-    Calculate a distance matrix between all pairs of sequences in the sample.
+    Calculate a normalized distance matrix between all pairs of sequences in the sample.
 
     Parameters:
     - sample: List of sequences (each sequence is a tuple of strings).
     - distance_func: Function to calculate distance between two sequences.
 
     Returns:
-    - A 2D numpy array where element (i, j) is the distance between sample[i] and sample[j].
+    - A 2D numpy array where element (i, j) is the normalized distance between sample[i] and sample[j].
     """
     # Special case for DTW distance
     if distance_func.__name__ == "dtw_distance":
-        return dtw.distance_matrix(sample)
+        distance_matrix = dtw.distance_matrix(sample)
+    else:
+        n = len(sample)
+        distance_matrix = np.zeros((n, n))
 
-    n = len(sample)
-    distance_matrix = np.zeros((n, n))
+        # Only compute upper triangle (including diagonal)
+        indices = np.triu_indices(n)
 
-    # Only compute upper triangle (including diagonal)
-    indices = np.triu_indices(n)
+        # Calculate distances for upper triangle
+        for i, j in zip(indices[0], indices[1]):
+            dist = distance_func(sample[i], sample[j])
+            distance_matrix[i, j] = dist
+            distance_matrix[j, i] = dist  # Symmetric
 
-    # Calculate distances for upper triangle
-    for i, j in zip(indices[0], indices[1]):
-        dist = distance_func(sample[i], sample[j])
-        distance_matrix[i, j] = dist
-        distance_matrix[j, i] = dist  # Symmetric
+    # Normalize the distance matrix
+    max_distance = np.max(distance_matrix)
+    if max_distance > 0:
+        distance_matrix /= max_distance
 
     return distance_matrix
