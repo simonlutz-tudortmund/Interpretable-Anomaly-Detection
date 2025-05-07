@@ -22,7 +22,7 @@ from src.utils.util import get_bounds
 # Configuration
 # CLASSES = range(7)  # Assuming classes 0-6
 # class_pairs = list(permutations(CLASSES, 2))  # All ordered pairs
-SEQUENCE_LENGTHS = [25]
+SEQUENCE_LENGTHS = [15]
 TEST_SIZE = 0.2  # 20% for testing
 BOUND_DEVIATIONS = [0.0]
 
