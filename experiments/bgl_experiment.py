@@ -24,17 +24,17 @@ from src.utils.util import get_bounds
 # class_pairs = list(permutations(CLASSES, 2))  # All ordered pairs
 SEQUENCE_LENGTHS = [25]
 TEST_SIZE = 0.2  # 20% for testing
-BOUND_DEVIATIONS = [0.0, 0.001, 0.002, 0.003, 0.004, 0.005]
+BOUND_DEVIATIONS = [0.0]
 
 # Setup directories
-base_folder = get_experiments_path().joinpath("hdfs")
+base_folder = get_experiments_path().joinpath("bgl")
 os.makedirs(base_folder.joinpath("logs"), exist_ok=True)
 os.makedirs(base_folder.joinpath("dfas"), exist_ok=True)
 
 # CSV Setup
 CSV_PATH = base_folder.joinpath("results_full.csv")
 SEEDS = [
-    114,
+    # 114,
     28998,
     7239,
     11517,
