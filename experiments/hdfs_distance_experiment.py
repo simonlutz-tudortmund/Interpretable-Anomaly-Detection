@@ -34,7 +34,7 @@ os.makedirs(base_folder.joinpath("dfas"), exist_ok=True)
 
 
 # CSV Setup
-CSV_PATH = base_folder.joinpath("results_bounds.csv")
+CSV_PATH = base_folder.joinpath("results_distances.csv")
 SEEDS = [
     114,
     28998,
