@@ -20,7 +20,7 @@ from src.utils.paths import get_experiments_path
 # Configuration
 # CLASSES = range(7)  # Assuming classes 0-6
 # class_pairs = list(permutations(CLASSES, 2))  # All ordered pairs
-SEQUENCE_LENGTHS = [15]
+SEQUENCE_LENGTHS = [5]
 TEST_SIZE = 0.2  # 20% for testing
 
 # Setup directories
