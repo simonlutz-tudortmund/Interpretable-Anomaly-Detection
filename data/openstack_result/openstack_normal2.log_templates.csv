@@ -1,0 +1,37 @@
+EventId,EventTemplate,Occurrences
+2ae03bfe,[instance: <*>] Took <*>.<*> seconds to deallocate network for instance.,1313
+c6898c4d,Unknown base file: /var/lib/nova/instances/_base/a489c868f0c37da93b76227c91bb03908ac0e<*>,1951
+8e372359,Removable base files: /var/lib/nova/instances/_base/a489c868f0c37da93b76227c91bb03908ac0e<*>,1951
+427acefb,Removing base or swap file: /var/lib/nova/instances/_base/a489c868f0c37da93b76227c91bb03908ac0e<*>,1313
+d49b2095,"<*> <*> <*> HTTP/<*>.<*>"" status: <*> len: <*> time: <*>.<*>",62693
+649b9389,"[instance: <*>] Attempting claim: memory <*> MB, disk <*> GB, vcpus <*> CPU",1313
+fefa9c58,"[instance: <*>] <*> <*> <*> MB, <*> <*>.<*> MB",2626
+fda3d281,[instance: <*>] Total <*> <*> <*> used: <*>.<*> <*>,2626
+3f98d481,"[instance: <*>] <*> limit not specified, defaulting to unlimited",2626
+72f56ddb,[instance: <*>] <*> <*>,3938
+c583951f,[instance: <*>] VM <*> (Lifecycle Event),6566
+d019cee3,Auditing locally available compute resources for node cp-<*>.slowvm1.tcloud-pg0.utah.cloudlab.us,1226
+f436579e,"Total usable vcpus: <*>, total allocated vcpus: <*>",1226
+52617e8c,Final resource view: name=cp-<*>.slowvm1.tcloud-pg0.utah.cloudlab.us phys_ram=64172MB <*> phys_disk=15GB <*> total_vcpus=<*> used_vcpus=<*> pci_stats=[],1226
+335ef092,Compute_service record updated for cp-<*>.slowvm1.tcloud-pg0.utah.cloudlab.us:cp-<*>.slowvm1.tcloud-pg0.utah.cloudlab.us,1226
+e9970c47,image <*> at (/var/lib/nova/instances/_base/a489c868f0c37da93b76227c91bb03908ac0e742): checking,9128
+f7926c11,"image <*> at (/var/lib/nova/instances/_base/a489c868f0c37da93b76227c91bb03908ac0e742): in use: on this node <*> local, <*> on other nodes sharing this instance storage",9128
+758c7b56,Active base files: /var/lib/nova/instances/_base/a489c868f0c37da93b76227c91bb03908ac0e<*>,9121
+47f4680b,[instance: <*>] During sync_power_state the instance has a pending task <*> Skip.,2589
+3b70c34a,Creating event network-vif-plugged:<*> for instance <*>,1313
+899b89e9,[instance: <*>] Instance <*> successfully.,2625
+055a3b29,[instance: <*>] Took <*>.<*> seconds to <*> the instance on the hypervisor.,2625
+9b22184f,[instance: <*>] Took <*>.<*> seconds to build instance.,1313
+fb3c7a48,[instance: <*>] Deleting instance files /var/lib/nova/instances/<*>_del,1312
+3f256a7a,[instance: <*>] Deletion of /var/lib/nova/instances/<*>_del complete,1312
+66acd71e,HTTP exception thrown: No instances found for any event,1312
+2c00d500,Successfully synced instances from host 'cp-<*>.slowvm1.tcloud-pg0.utah.cloudlab.us'.,384
+d24a2528,Base or swap file too young to remove: /var/lib/nova/instances/_base/a489c868f0c37da93b76227c91bb03908ac0e<*>,638
+fd9aba29,The instance sync for host 'cp-<*>.slowvm1.tcloud-pg0.utah.cloudlab.us' did not match. Re-created its InstanceList.,226
+f95e7506,Running instance usage audit for host cp-<*>.slowvm1.tcloud-pg0.utah.cloudlab.us from <*>-<*>-<*> <*>:<*>:<*> to <*>-<*>-<*> <*>:<*>:<*>. <*> instances.,21
+7d8b6b51,"While synchronizing instance power states, found <*> instances in the database and <*> instances on the hypervisor.",27
+f5c027b5,Error during ComputeManager._run_image_cache_manager_pass,7
+63e82264,"couldn't obtain the vcpu count from domain id: <*>, exception: Requested operation is not valid: cpu affinity is not supported",9
+7ca28619,Bad response code while validating token: <*>,1
+ab8da5fe,"Identity response: <!DOCTYPE HTML PUBLIC ""-//IETF//DTD HTML <*>.<*>//EN"">",1
+c28159fd,Unable to validate token: Failed to fetch token data from identity server,1
