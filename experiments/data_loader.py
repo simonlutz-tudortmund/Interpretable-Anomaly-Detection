@@ -119,27 +119,44 @@ def load_bgl_data(
     return train_df, test_df, alphabet
 
 
-# train_df, test_df, alphabet = load_alfred_data(0)
+def load_openstack_data(
+    seed: int, test_percentage: float, max_sequence_length: int
+) -> Tuple[pd.DataFrame, pd.DataFrame, frozenset[str]]:
+    """
+    Load the HFDS dataset based on the provided seed and split percentage.
+    Ensure that both train and test splits contain every letter of the alphabet.
+    """
 
-# positive_sample = train_df[train_df["Label"] == 1]["Features"].values.tolist()
-# negative_sample = train_df[train_df["Label"] == 0]["Features"].values.tolist()
+    def convert_to_tuple(features_str):
+        elements = re.findall(r"E\d+", features_str)
+        return tuple(elements)
 
-# dfa, _ = learn_dfa_with_bounds(
-#     alphabet=alphabet,
-#     sample=train_df["Features"].values.tolist(),
-#     lower_bound=0.09,
-#     upper_bound=0.1,
-#     min_dfa_size=2,
-#     lambda_l=None,
-#     lambda_s=None,
-#     lambda_p=None,
-#     verbose=2,
-# )
+    # Load the dataset
+    df = pd.read_csv(
+        get_data_path().joinpath("OpenStack", "Openstack.csv"),  # Update path as needed
+        index_col=0,
+    )
+    df["Features"] = df["Features"].apply(convert_to_tuple)
 
+    # Filter by max sequence length
+    df = df[df["Features"].apply(len) <= max_sequence_length]
 
-# print("Train DataFrame:")
-# print(train_df.head())
-# print("\nTest DataFrame:")
-# print(test_df.head())
-# print("\nAlphabet:")
-# print(alphabet)
+    # Assuming labels are in a 'Label' column; adjust if different
+    # If labels are mixed in 'Features', this needs different handling
+    if "Label" in df.columns:
+        df["Label"] = df["Label"].map({"Success": 0, "Fail": 1})
+    else:
+        raise ValueError("Label column not found. Check dataset structure.")
+
+    # Extract alphabet from features
+    alphabet = frozenset(value for trace in df["Features"] for value in trace)
+
+    # Shuffle the dataset
+    df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
+
+    # Initial split
+    split_index = int(len(df) * (1 - test_percentage))
+    train_df = df[:split_index]
+    test_df = df[split_index:]
+
+    return train_df, test_df, alphabet

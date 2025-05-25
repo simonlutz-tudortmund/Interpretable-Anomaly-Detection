@@ -24,7 +24,7 @@ TEST_SIZE = 0.2  # 20% for testing
 BOUND_DEVIATIONS = [0.0]
 
 # Setup directories
-base_folder = get_experiments_path().joinpath("hdfs")
+base_folder = get_experiments_path().joinpath("openstack")
 os.makedirs(base_folder.joinpath("logs"), exist_ok=True)
 os.makedirs(base_folder.joinpath("gurobi_logs"), exist_ok=True)
 os.makedirs(base_folder.joinpath("dfas"), exist_ok=True)
