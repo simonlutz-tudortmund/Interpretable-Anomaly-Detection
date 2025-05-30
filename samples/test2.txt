@@ -1,4 +1,0 @@
-b;b;b,reject
-b;a;a,reject
-c;c;c;c;c;c;c;c;b,accept
-c;c;c;c;c;c;c;c;c;c;c;c,accept

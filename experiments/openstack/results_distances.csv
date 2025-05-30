@@ -1,0 +1,2 @@
+seed,max_sequence_length,case_name,deviation,lower_bound,upper_bound,exact_bound,runtime,precision,recall,f1,states,status,error_message
+114,1000000,both_bounds,0.0,0.071,0.072,0.07198306280875089,,,,,,failed,

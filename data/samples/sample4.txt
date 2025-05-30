@@ -1,0 +1,11 @@
+a,a,a,a,a,a,a,a,a,a
+a,a,a,a,a,a,a,a,a
+a,a,a,a,a,a,a,a
+a,a,a,a,a,a,a
+b,b,b,b,b,b,b,b,b,b
+b,b,b,b,b,b,b,b,b
+b,b,b,b,b,b,b,b
+b,a,b,b,a,b,a,b
+a,a,b,a,a,b,a,a
+c,c,c
+c,c
