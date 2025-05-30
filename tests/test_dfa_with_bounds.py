@@ -1,4 +1,3 @@
-from sklearn import base
 from src.milp.milp_data_file import learn_dfa_with_bounds
 import pytest
 import random

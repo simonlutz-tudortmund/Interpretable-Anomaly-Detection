@@ -36,11 +36,11 @@ dfa, _ = learn_dfa_with_bounds(sample, alphabet, lower_bound, upper_bound, min_d
 
 if dfa:
     print("Minimal DFA found:")
-    print(f"States: {dfa['states']}")
-    print(f"Alphabet: {dfa['alphabet']}")
-    print(f"Transitions: {dfa['transitions']}")
-    print(f"Initial State: {dfa['initial_state']}")
-    print(f"Final States: {dfa['final_states']}")
+    print(f"States: {dfa.states}")
+    print(f"Alphabet: {dfa.alphabet}")
+    print(f"Transitions: {dfa.transitions}")
+    print(f"Initial State: {dfa.initial_state}")
+    print(f"Final States: {dfa.final_states}")
 else:
     print("No feasible DFA found within the given bounds.")
 ```

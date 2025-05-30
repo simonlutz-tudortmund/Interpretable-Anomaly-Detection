@@ -13,7 +13,7 @@ from src.utils.distance_functions import (
     distance_function_names,
 )
 from src.milp.problem import Problem
-from utils.dfa import CausalDFA
+from src.utils.dfa import CausalDFA
 
 
 def learn_dfa_with_bounds(
@@ -21,10 +21,10 @@ def learn_dfa_with_bounds(
     alphabet: frozenset[str],
     lower_bound: Optional[float],
     upper_bound: Optional[float],
-    lambda_s: Optional[float],
-    lambda_l: Optional[float],
-    lambda_p: Optional[float],
     min_dfa_size: int,
+    lambda_s: Optional[float] = None,
+    lambda_l: Optional[float] = None,
+    lambda_p: Optional[float] = None,
     verbose=0,
     log_file: Optional[str] = None,
 ) -> Tuple[CausalDFA, Problem]:
@@ -116,10 +116,10 @@ def learn_dfa_with_labels(
     positive_sample: list[tuple[str, ...]],
     negative_sample: list[tuple[str, ...]],
     alphabet: frozenset[str],
-    lambda_s: Optional[float],
-    lambda_l: Optional[float],
-    lambda_p: Optional[float],
     min_dfa_size: int,
+    lambda_s: Optional[float] = None,
+    lambda_l: Optional[float] = None,
+    lambda_p: Optional[float] = None,
     verbose=0,
     log_file: Optional[str] = None,
 ) -> Tuple[CausalDFA, Problem]:
@@ -185,10 +185,10 @@ def learn_dfa_with_distances_linear(
     distance_function: Literal[
         "levenshtein", "jaccard", "hamming", "ordinal_hamming", "dynamic_time_warping"
     ],
-    lambda_s: Optional[float],
-    lambda_l: Optional[float],
-    lambda_p: Optional[float],
     dfa_size: int,
+    lambda_s: Optional[float] = None,
+    lambda_l: Optional[float] = None,
+    lambda_p: Optional[float] = None,
     verbose=0,
     log_file: Optional[str] = None,
 ) -> Tuple[CausalDFA, Problem]:
@@ -269,10 +269,10 @@ def learn_dfa_with_distances_quadratic(
     distance_function: Literal[
         "levenshtein", "jaccard", "hamming", "ordinal_hamming", "dynamic_time_warping"
     ],
-    lambda_s: Optional[float],
-    lambda_l: Optional[float],
-    lambda_p: Optional[float],
     dfa_size: int,
+    lambda_s: Optional[float] = None,
+    lambda_l: Optional[float] = None,
+    lambda_p: Optional[float] = None,
     verbose=0,
     log_file: Optional[str] = None,
 ) -> Tuple[CausalDFA, Problem]:
