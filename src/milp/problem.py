@@ -1,7 +1,7 @@
 import logging
 import sys
 from typing import Optional
-from gurobipy import GRB, Model, quicksum
+from gurobipy import GRB, Model, quicksum, Env
 import numpy as np
 from src.milp.classification import GurobiClassification
 from src.utils.dfa import DFABuilder
@@ -10,15 +10,17 @@ from src.utils.dfa import DFABuilder
 class Problem:
     def __init__(
         self,
+        env: Env,
         N: int,
         alphabet: frozenset[str],
     ):
+        self.env = env
         self.N: int = N
         self.alphabet: frozenset[str] = alphabet
         self.restart()
 
     def restart(self):
-        self.model: Model = Model(f"Hypothesis_{self.N}")
+        self.model: Model = Model(f"Hypothesis_{self.N}", env=self.env)
 
     def add_automaton_constraints(self):
         self.states = range(self.N)
