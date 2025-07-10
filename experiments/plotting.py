@@ -6,6 +6,183 @@ import matplotlib.pyplot as plt
 from src.utils.paths import get_experiments_path
 
 
+
+def plot_num_states():
+    base_folder = get_experiments_path()
+    # CSV Setup
+    csv_path_bounds = base_folder.joinpath("alfred", "num_states", "results_bounds.csv")
+    csv_path_distances = base_folder.joinpath("alfred", "num_states", "results_distances.csv")
+    num_states = [2, 3, 4, 5, 6, 7, 8, 9, 10] 
+    # Visualization
+    df_bounds = pd.read_csv(csv_path_bounds)[["states", "f1", "case_name"]]
+    df_distances = pd.read_csv(csv_path_distances)[["states", "f1"]]
+    df_distances["case_name"] = "distance"
+    df = pd.concat([df_bounds, df_distances], ignore_index=True)
+    df["case_type"] = df.case_name.map(
+        {"both_bounds": "Two-Bound", "upper_only": "Single-Bound", "distance": "Distance-Based"}
+    )
+
+    # Aggregate results across all class pairs
+    agg_df = (
+        df.groupby(["case_type", "states"])
+        .agg(mean_f1=("f1", "mean"), std_f1=("f1", "std"))
+        .reset_index()
+    )
+
+    plt.figure(figsize=(8, 3))
+    sns.set_style(style="whitegrid")
+    color_palette = sns.color_palette("husl", n_colors=4)
+    color_palette = {
+        "Two-Bound": color_palette[0],
+        "Single-Bound": color_palette[1],
+        "Distance-Based": color_palette[2],
+    }
+    line_styles = {"Two-Bound": "-", "Single-Bound": "--", "Distance-Based": "-."}
+    markers = {"Two-Bound": "o", "Single-Bound": "s", "Distance-Based": "D"}
+
+    # Create plot
+    for case_type in ["Two-Bound", "Single-Bound", "Distance-Based"]:
+        case_data = agg_df[agg_df.case_type == case_type].sort_values("states")
+        states = case_data.states
+        means = case_data.mean_f1
+        stds = case_data.std_f1
+
+        plt.plot(
+            states,
+            means,
+            label=case_type,
+            color=color_palette[case_type],
+            linestyle=line_styles[case_type],
+            marker=markers[case_type],
+            markersize=8,
+            linewidth=2.5,
+        )
+
+        plt.fill_between(
+            states,
+            means - stds,
+            means + stds,
+            color=color_palette[case_type],
+            alpha=0.2,
+        )
+
+    # plt.title("Average F1 Score vs Acceptance Bound Deviation", pad=15)
+    plt.xlabel("Number of States", labelpad=10)
+    plt.ylabel("F1 Score", labelpad=10)
+    plt.ylim(0, 1.175)
+    plt.xlim(2-0.5, max(num_states) + 0.5)
+    plt.grid(True, alpha=0.3)
+
+    # Create legend
+    handles, labels = plt.gca().get_legend_handles_labels()
+    new_handles = [
+        plt.Line2D(
+            [0], [0], color=color_palette[label], linestyle=line_styles[label], lw=2.5
+        )
+        for label in labels
+    ]
+    plt.legend(
+        new_handles,
+        labels,
+        # title="Bound Type",
+        loc="upper center",
+        frameon=True,
+        framealpha=0.9,
+        bbox_to_anchor=(0.5, 1.30),  # Position the legend above the plot
+        ncol=4,
+    )
+    plt.tight_layout()
+
+    plt.savefig(
+        str(
+            base_folder.joinpath("plots", "alfred_num_states.png"),
+        ),
+        dpi=300,
+        bbox_inches="tight",
+    )
+    plt.savefig(
+        str(
+            base_folder.joinpath("plots", "alfred_num_states.pdf"),
+        ),
+        dpi=300,
+        bbox_inches="tight",
+    )
+    plt.close()
+
+mpl.rcParams.update(
+    {
+        # "text.usetex": True,
+        "font.family": "serif",
+        # Specify the serif font to match LNCS requirements
+        "font.serif": ["Computer Modern Roman"],  # or ["Times"] if using Times
+        "axes.labelsize": 12.5,
+        "font.size": 12.5,
+        "legend.fontsize": 12.5,
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+    }
+)
+plot_num_states()
+assert False
+
+def plot_interpretability_distribution():
+    # List of your CSV files
+    base_folder = get_experiments_path()
+
+    # Mapping of file names to dataset names
+    csv_file = str(base_folder.joinpath("hdfs", "interpretability", "results_bounds.csv"))
+    # Mapping of case_name to algorithm names
+    algorithm_mapping = {
+        "standart": "Baseline",
+        "self_loops": "Self-Loops",
+        "sink_states": "Sink States",
+        "parallel_edges": "Parallel Edges",
+        "self_loops_and_sink_states": "Self-Loops \nSink States",
+        "self_loops_and_parallel_edges": "Self-Loops \n Parallel Edges",
+        "sink_states_and_parallel_edges": "Sink States \n Parallel Edges",
+        "all": "Self-Loops \n Sink States \n Parallel Edges",
+    }
+
+    # List to hold individual DataFrames
+    data_frames = []
+
+    # Read and process each CSV file
+    df = pd.read_csv(csv_file)
+    df = df[
+        ["interpretability_case", "f1"]
+    ].dropna()  # Extract relevant columns and drop missing values
+    df["algorithm"] = df["interpretability_case"].map(
+        algorithm_mapping
+    )  # Map to algorithm names
+
+    # Set the visual style
+    sns.set_style(style="whitegrid")
+
+    # Create the boxplot
+    plt.figure(figsize=(12, 5))
+    sns.boxplot(x="algorithm", y="f1", hue="algorithm", data=df, palette="Set2")
+    sns.set(font_scale=2,)
+
+    # Add titles and labels
+    # plt.title("F1 Score Distribution by Algorithm Across Datasets")
+    plt.ylabel("F1 Score")
+    plt.xlabel("")
+
+    # Display the plot
+    plt.tight_layout()
+    # plt.show()
+    plt.savefig(
+        str(base_folder.joinpath("plots", "interpretability.png")),
+        dpi=300,
+        bbox_inches="tight",
+    )
+    plt.savefig(
+        str(base_folder.joinpath("plots", "interpretability.pdf")),
+        dpi=300,
+        bbox_inches="tight",
+    )
+    plt.close()
+
 def plot_f1_score_distribution():
     # List of your CSV files
     base_folder = get_experiments_path()
@@ -263,7 +440,6 @@ def plot_bound_deviation():
         bbox_inches="tight",
     )
     plt.close()
-
 
 mpl.rcParams.update(
     {
